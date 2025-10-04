@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Progress } from "@/components/ui/progress"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import dynamic from "next/dynamic"
 
 const VolodyaInsights = dynamic(() => import("@/components/dashboard/volodya-insights").then(mod => ({ default: mod.VolodyaInsights })), { ssr: false })
@@ -32,7 +33,7 @@ import {
   TrendingUp
 } from "lucide-react"
 import { motion } from "framer-motion"
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 import {
   stats,
   achievements,
@@ -45,6 +46,8 @@ import {
 
 
 export default function DashboardPage() {
+  const [isQuickActionsOpen, setIsQuickActionsOpen] = useState(false)
+
   // Мемоизированные вычисления
   const earnedAchievements = useMemo(() => achievements.filter(a => a.earned), [])
   const totalPoints = useMemo(() => earnedAchievements.reduce((sum, a) => sum + a.points, 0), [earnedAchievements])
@@ -135,12 +138,19 @@ export default function DashboardPage() {
           <p className="text-white/70 mt-1 md:mt-2 text-sm md:text-lg">Обзор вашей CRM-системы и текущих показателей</p>
         </div>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full lg:w-auto">
-          <Button variant="ghost" className="text-[#7B61FF] hover:bg-[#7B61FF]/10 border border-[#7B61FF]/20 backdrop-blur-sm justify-center sm:justify-start">
+          <Button
+            variant="ghost"
+            onClick={() => window.open('/dashboard/volodya', '_blank')}
+            className="text-[#7B61FF] hover:bg-[#7B61FF]/10 border border-[#7B61FF]/20 backdrop-blur-sm justify-center sm:justify-start"
+          >
             <Bot className="w-4 h-4 mr-2" />
             <span className="hidden sm:inline">Спросить Володю</span>
             <span className="sm:hidden">Володя</span>
           </Button>
-          <Button className="bg-gradient-to-r from-[#7B61FF] to-[#6B51EF] hover:from-[#6B51EF] hover:to-[#5A41DF] text-white shadow-lg hover:shadow-xl transition-all duration-300 justify-center">
+          <Button
+            onClick={() => setIsQuickActionsOpen(true)}
+            className="bg-gradient-to-r from-[#7B61FF] to-[#6B51EF] hover:from-[#6B51EF] hover:to-[#5A41DF] text-white shadow-lg hover:shadow-xl transition-all duration-300 justify-center"
+          >
             <Sparkles className="w-4 h-4 mr-2" />
             <span className="hidden sm:inline">Быстрое действие</span>
             <span className="sm:hidden">Действие</span>
@@ -415,6 +425,92 @@ export default function DashboardPage() {
 
       {/* Рекомендации от Володи */}
       <VolodyaInsights />
+
+      {/* Модальное окно быстрых действий */}
+      <Dialog open={isQuickActionsOpen} onOpenChange={setIsQuickActionsOpen}>
+        <DialogContent className="bg-black/80 backdrop-blur-xl border border-white/20 max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-white">Быстрые действия</DialogTitle>
+            <DialogDescription className="text-white/70">
+              Выберите действие для быстрого выполнения
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-3">
+            <Button
+              variant="outline"
+              className="h-16 flex-col border-white/20 hover:bg-white/10"
+              onClick={() => {
+                window.open('/dashboard/leads/new', '_blank')
+                setIsQuickActionsOpen(false)
+              }}
+            >
+              <UserPlus className="w-5 h-5 mb-2" />
+              <span className="text-sm">Новый лид</span>
+            </Button>
+            <Button
+              variant="outline"
+              className="h-16 flex-col border-white/20 hover:bg-white/10"
+              onClick={() => {
+                window.open('/dashboard/contacts/new', '_blank')
+                setIsQuickActionsOpen(false)
+              }}
+            >
+              <Users className="w-5 h-5 mb-2" />
+              <span className="text-sm">Контакт</span>
+            </Button>
+            <Button
+              variant="outline"
+              className="h-16 flex-col border-white/20 hover:bg-white/10"
+              onClick={() => {
+                window.open('/dashboard/opportunities/new', '_blank')
+                setIsQuickActionsOpen(false)
+              }}
+            >
+              <Target className="w-5 h-5 mb-2" />
+              <span className="text-sm">Сделка</span>
+            </Button>
+            <Button
+              variant="outline"
+              className="h-16 flex-col border-white/20 hover:bg-white/10"
+              onClick={() => {
+                window.open('/dashboard/tasks/new', '_blank')
+                setIsQuickActionsOpen(false)
+              }}
+            >
+              <CheckSquare className="w-5 h-5 mb-2" />
+              <span className="text-sm">Задача</span>
+            </Button>
+          </div>
+
+          <div className="mt-4 pt-4 border-t border-white/10">
+            <p className="text-sm text-white/70 mb-3">Быстрый анализ</p>
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs border-white/20 hover:bg-white/10"
+                onClick={() => {
+                  window.open('/dashboard/analytics', '_blank')
+                  setIsQuickActionsOpen(false)
+                }}
+              >
+                📊 Аналитика
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs border-white/20 hover:bg-white/10"
+                onClick={() => {
+                  window.open('/dashboard/reports', '_blank')
+                  setIsQuickActionsOpen(false)
+                }}
+              >
+                📋 Отчеты
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </motion.div>
   )
 }
