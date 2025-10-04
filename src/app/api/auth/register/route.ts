@@ -9,10 +9,34 @@ export async function POST(request: NextRequest) {
   try {
     const { name, email, password, phone, position, department } = await request.json()
 
-    // Проверка обязательных полей
+    // Валидация обязательных полей
     if (!name || !email || !password) {
       return NextResponse.json(
         { error: "Имя, email и пароль обязательны" },
+        { status: 400 }
+      )
+    }
+
+    // Валидация email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+      return NextResponse.json(
+        { error: "Некорректный формат email" },
+        { status: 400 }
+      )
+    }
+
+    // Валидация пароля (минимум 8 символов, хотя бы одна цифра и буква)
+    if (password.length < 8) {
+      return NextResponse.json(
+        { error: "Пароль должен содержать минимум 8 символов" },
+        { status: 400 }
+      )
+    }
+
+    if (!/(?=.*[a-zA-Z])(?=.*\d)/.test(password)) {
+      return NextResponse.json(
+        { error: "Пароль должен содержать хотя бы одну букву и одну цифру" },
         { status: 400 }
       )
     }

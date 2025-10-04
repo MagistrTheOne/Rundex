@@ -46,7 +46,7 @@ export function VolodyaInsights() {
   const [insights, setInsights] = useState<VolodyaInsight[]>([])
   const [sarcasticComments, setSarcasticComments] = useState<SarcasticComment[]>([])
   const [isLoading, setIsLoading] = useState(false)
-  const [lastUpdate, setLastUpdate] = useState<Date>(new Date())
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(null)
 
   // Генерация AI-инсайтов на основе анализа данных CRM
   const generateInsights = async () => {
@@ -248,7 +248,7 @@ export function VolodyaInsights() {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
     >
-      <Card className="bg-black/50 backdrop-blur-xl border-gray-800">
+      <Card className="bg-black/80 backdrop-blur-xl border-gray-800">
         <CardHeader className="flex flex-row items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="relative">
@@ -274,7 +274,7 @@ export function VolodyaInsights() {
               Онлайн
             </Badge>
             <span className="text-xs text-white/50">
-              {lastUpdate.toLocaleTimeString('ru-RU')}
+              {lastUpdate ? lastUpdate.toLocaleTimeString('ru-RU') : 'Загрузка...'}
             </span>
             <Button
               variant="ghost"

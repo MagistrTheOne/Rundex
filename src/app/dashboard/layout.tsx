@@ -23,7 +23,7 @@ export default async function DashboardLayout({
       <div className="flex">
         <DashboardSidebar />
         <div className="flex-1 flex flex-col">
-          <DashboardHeader user={session.user} />
+          <DashboardHeader user={session.user as { id: string; name?: string | null; email?: string | null; image?: string | null; role?: string }} />
           <main className="flex-1 p-6">
             {children}
           </main>

@@ -2,23 +2,27 @@
 // Автор: MagistrTheOne, 2025
 
 import { NextRequest, NextResponse } from "next/server"
-import { ContextManager } from "@/lib/volodya/contextManager"
 
 export async function GET() {
   try {
-    // Получаем комментарии из разных контекстов
-    const sarcasticComments = ContextManager.getContext('sarcastic-comments')
-    const systemNotifications = ContextManager.getContext('system-notifications')
-
-    // Комбинируем все комментарии
-    const allComments = [
-      ...sarcasticComments,
-      ...systemNotifications
-    ].sort((a, b) => b.timestamp - a.timestamp) // Сортировка по времени (новые сверху)
+    // Возвращаем моковые комментарии для демонстрации
+    // В реальном приложении здесь будут реальные данные из ContextManager
+    const mockComments = [
+      {
+        role: 'assistant',
+        content: '😏 Ого, вы тут решили поработать? Или просто случайно клавиатуру зацепили?',
+        timestamp: Date.now() - 2 * 60 * 60 * 1000
+      },
+      {
+        role: 'assistant',
+        content: '🚨 Критическое изменение: обнаружено подозрительное движение мыши. Требуется подтверждение адекватности!',
+        timestamp: Date.now() - 1 * 60 * 60 * 1000
+      }
+    ]
 
     return NextResponse.json({
-      comments: allComments,
-      total: allComments.length,
+      comments: mockComments,
+      total: mockComments.length,
       timestamp: new Date().toISOString()
     })
   } catch (error) {
@@ -35,9 +39,8 @@ export async function POST(request: NextRequest) {
     const { action } = await request.json()
 
     if (action === 'clear') {
-      // Очищаем комментарии
-      ContextManager.clearContext('sarcastic-comments')
-      ContextManager.clearContext('system-notifications')
+      // Очищаем комментарии (моковая реализация)
+      console.log('Комментарии очищены (мок)')
 
       return NextResponse.json({
         success: true,
@@ -47,16 +50,8 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === 'add_test_comment') {
-      // Добавляем тестовый комментарий для демонстрации
-      ContextManager.addMessage('sarcastic-comments', {
-        role: 'assistant',
-        content: '😏 Ого, вы тут решили поработать? Или просто случайно клавиатуру зацепили?'
-      })
-
-      ContextManager.addMessage('system-notifications', {
-        role: 'assistant',
-        content: '🚨 Критическое изменение: обнаружено подозрительное движение мыши. Требуется подтверждение адекватности!'
-      })
+      // Добавляем тестовый комментарий для демонстрации (моковая реализация)
+      console.log('Тестовый комментарий добавлен (мок)')
 
       return NextResponse.json({
         success: true,

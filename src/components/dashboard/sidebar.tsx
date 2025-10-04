@@ -19,7 +19,8 @@ import {
   Home,
   Building2,
   FileText,
-  MessageSquare
+  MessageSquare,
+  User
 } from "lucide-react"
 
 const navigation = [
@@ -78,13 +79,18 @@ const navigation = [
     href: "/dashboard/messages",
     icon: MessageSquare,
   },
+  {
+    name: "Профиль",
+    href: "/dashboard/profile",
+    icon: User,
+  },
 ]
 
 export function DashboardSidebar() {
   const pathname = usePathname()
 
   return (
-    <div className="w-64 min-h-screen glass border-r border-white/10">
+    <div className="w-64 min-w-64 max-w-64 min-h-screen glass-nav border-r border-white/10 sidebar-width">
       <div className="p-6">
         <div className="flex items-center space-x-2 mb-8">
           <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
@@ -129,19 +135,6 @@ export function DashboardSidebar() {
           </Link>
         </div>
 
-        <div className="absolute bottom-4 left-4 right-4">
-          <div className="glass-card rounded-lg p-4 text-center">
-            <div className="text-xs text-white/50 mb-1">
-              Разработано
-            </div>
-            <div className="text-sm font-medium text-white">
-              MagistrTheOne
-            </div>
-            <div className="text-xs text-white/30 mt-1">
-              © 2025
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   )

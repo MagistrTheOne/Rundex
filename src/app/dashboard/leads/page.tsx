@@ -15,51 +15,25 @@ import { Plus, Search, Filter, MoreHorizontal, UserPlus, Phone, Mail, Building }
 import { LeadForm } from "@/components/leads/lead-form"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
-// Моковые данные лидов (позже будут загружаться из API)
-const mockLeads = [
-  {
-    id: "1",
-    firstName: "Иван",
-    lastName: "Иванов",
-    email: "ivan.ivanov@example.com",
-    phone: "+7 (999) 123-45-67",
-    company: "ООО 'ТехноСервис'",
-    position: "Директор",
-    status: "NEW",
-    priority: "HIGH",
-    source: "WEBSITE",
-    score: 85,
-    createdAt: "2025-01-15"
-  },
-  {
-    id: "2",
-    firstName: "Мария",
-    lastName: "Петрова",
-    email: "maria.petrova@example.com",
-    phone: "+7 (999) 234-56-78",
-    company: "ИП Петрова",
-    position: "Владелец",
-    status: "CONTACTED",
-    priority: "MEDIUM",
-    source: "SOCIAL_MEDIA",
-    score: 72,
-    createdAt: "2025-01-14"
-  },
-  {
-    id: "3",
-    firstName: "Алексей",
-    lastName: "Сидоров",
-    email: "alexey.sidorov@example.com",
-    phone: "+7 (999) 345-67-89",
-    company: "ЗАО 'СтройИнвест'",
-    position: "Менеджер",
-    status: "QUALIFIED",
-    priority: "HIGH",
-    source: "REFERRAL",
-    score: 91,
-    createdAt: "2025-01-13"
+// Типы данных для лидов
+interface Lead {
+  id: string
+  firstName: string
+  lastName: string
+  email: string
+  phone: string
+  company: string
+  position: string
+  status: string
+  priority: string
+  source: string
+  score: number
+  createdAt: string
+  assignedTo?: {
+    name: string
+    email: string
   }
-]
+}
 
 const statusLabels = {
   NEW: { label: "Новый", color: "bg-blue-500/20 text-blue-400" },
@@ -79,49 +53,97 @@ const priorityLabels = {
 }
 
 export default function LeadsPage() {
-  const [leads, setLeads] = useState(mockLeads)
+  const [leads, setLeads] = useState<Lead[]>([])
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState("ALL")
   const [priorityFilter, setPriorityFilter] = useState("ALL")
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
-  const [editingLead, setEditingLead] = useState(null)
+  const [editingLead, setEditingLead] = useState<Lead | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  const filteredLeads = leads.filter(lead => {
-    const matchesSearch =
-      lead.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      lead.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      lead.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      lead.company?.toLowerCase().includes(searchQuery.toLowerCase())
+  // Загрузка лидов из API
+  useEffect(() => {
+    const fetchLeads = async () => {
+      try {
+        setIsLoading(true)
+        const params = new URLSearchParams()
+        if (statusFilter !== "ALL") params.append("status", statusFilter)
+        if (priorityFilter !== "ALL") params.append("priority", priorityFilter)
+        if (searchQuery) params.append("search", searchQuery)
 
-    const matchesStatus = statusFilter === "ALL" || lead.status === statusFilter
-    const matchesPriority = priorityFilter === "ALL" || lead.priority === priorityFilter
+        const response = await fetch(`/api/leads?${params}`)
+        if (!response.ok) throw new Error("Ошибка загрузки лидов")
 
-    return matchesSearch && matchesStatus && matchesPriority
-  })
-
-  const handleCreateLead = (leadData: any) => {
-    // В будущем здесь будет API вызов
-    const newLead = {
-      id: Date.now().toString(),
-      ...leadData,
-      score: Math.floor(Math.random() * 40) + 60, // Случайный скор от 60 до 100
-      createdAt: new Date().toISOString().split('T')[0]
+        const data = await response.json()
+        setLeads(data)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Неизвестная ошибка")
+      } finally {
+        setIsLoading(false)
+      }
     }
-    setLeads([newLead, ...leads])
-    setIsCreateDialogOpen(false)
+
+    fetchLeads()
+  }, [statusFilter, priorityFilter, searchQuery])
+
+  // Фильтрация теперь происходит на сервере, но оставляем для клиентской фильтрации если нужно
+  const filteredLeads = leads
+
+  const handleCreateLead = async (leadData: any) => {
+    try {
+      const response = await fetch('/api/leads', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(leadData),
+      })
+
+      if (!response.ok) throw new Error('Ошибка создания лида')
+
+      const newLead = await response.json()
+      setLeads([newLead, ...leads])
+      setIsCreateDialogOpen(false)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Ошибка создания лида")
+    }
   }
 
-  const handleEditLead = (leadData: any) => {
-    // В будущем здесь будет API вызов
-    setLeads(leads.map(lead =>
-      lead.id === editingLead.id ? { ...lead, ...leadData } : lead
-    ))
-    setEditingLead(null)
+  const handleEditLead = async (leadData: any) => {
+    try {
+      const response = await fetch(`/api/leads/${editingLead?.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(leadData),
+      })
+
+      if (!response.ok) throw new Error('Ошибка обновления лида')
+
+      const updatedLead = await response.json()
+      setLeads(leads.map(lead =>
+        lead.id === editingLead?.id ? updatedLead : lead
+      ))
+      setEditingLead(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Ошибка обновления лида")
+    }
   }
 
-  const handleDeleteLead = (leadId: string) => {
-    // В будущем здесь будет API вызов
-    setLeads(leads.filter(lead => lead.id !== leadId))
+  const handleDeleteLead = async (leadId: string) => {
+    try {
+      const response = await fetch(`/api/leads/${leadId}`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) throw new Error('Ошибка удаления лида')
+
+      setLeads(leads.filter(lead => lead.id !== leadId))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Ошибка удаления лида")
+    }
   }
 
   return (
@@ -200,25 +222,34 @@ export default function LeadsPage() {
       </Card>
 
       {/* Таблица лидов */}
-      <Card className="glass-card">
+      <Card className="bg-black/40 backdrop-blur-xl border border-white/10">
         <CardHeader>
           <CardTitle className="text-white">Лиды ({filteredLeads.length})</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow className="border-white/10">
-                <TableHead className="text-white">Имя</TableHead>
-                <TableHead className="text-white">Компания</TableHead>
-                <TableHead className="text-white">Контакты</TableHead>
-                <TableHead className="text-white">Статус</TableHead>
-                <TableHead className="text-white">Приоритет</TableHead>
-                <TableHead className="text-white">Скор</TableHead>
-                <TableHead className="text-white">Действия</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredLeads.map((lead) => (
+          {error && (
+            <div className="text-red-400 mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+              {error}
+            </div>
+          )}
+
+          {isLoading ? (
+            <div className="text-white/70 text-center py-8">Загрузка лидов...</div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow className="border-white/10">
+                  <TableHead className="text-white">Имя</TableHead>
+                  <TableHead className="text-white">Компания</TableHead>
+                  <TableHead className="text-white">Контакты</TableHead>
+                  <TableHead className="text-white">Статус</TableHead>
+                  <TableHead className="text-white">Приоритет</TableHead>
+                  <TableHead className="text-white">Скор</TableHead>
+                  <TableHead className="text-white">Действия</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredLeads.map((lead) => (
                 <TableRow key={lead.id} className="border-white/10">
                   <TableCell className="text-white font-medium">
                     {lead.firstName} {lead.lastName}
@@ -281,16 +312,17 @@ export default function LeadsPage() {
                     </DropdownMenu>
                   </TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
 
       {/* Диалог редактирования */}
       {editingLead && (
         <Dialog open={!!editingLead} onOpenChange={() => setEditingLead(null)}>
-          <DialogContent className="glass-card border-white/20 max-w-2xl">
+          <DialogContent className="bg-black/80 backdrop-blur-xl border border-white/20 max-w-2xl">
             <DialogHeader>
               <DialogTitle className="text-white">Редактировать лида</DialogTitle>
               <DialogDescription className="text-white/70">
