@@ -1,0 +1,436 @@
+// Rundex CRM - Схема базы данных
+// Автор: MagistrTheOne, 2025
+// Разработчик: MagistrTheOne (solo developer)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Модель пользователя
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  password      String
+  role          UserRole  @default(USER)
+  avatar        String?
+  phone         String?
+  position      String?   // Должность
+  department    String?   // Отдел
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Связи
+  leads         Lead[]
+  contacts      Contact[]
+  assignedTasks Task[]     @relation("TaskAssignee")
+  createdTasks  Task[]     @relation("TaskCreator")
+  activities    Activity[]
+  accounts      Account[] @relation("AccountOwner")
+  opportunities Opportunity[]
+  campaigns     Campaign[]
+  reports       Report[]
+  sessions      Session[]
+
+  @@map("users")
+}
+
+// Роли пользователей
+enum UserRole {
+  ADMIN
+  MANAGER
+  SALES
+  USER
+}
+
+// Модель лида (потенциального клиента)
+model Lead {
+  id            String      @id @default(cuid())
+  firstName     String
+  lastName      String
+  email         String?
+  phone         String?
+  company       String?
+  position      String?     // Должность
+  website       String?
+  address       String?
+  city          String?
+  region        String?     // Регион РФ
+  source        LeadSource  @default(OTHER)
+  status        LeadStatus  @default(NEW)
+  priority      Priority    @default(MEDIUM)
+  budget        Float?
+  notes         String?
+  score         Int?        // Оценка лида (0-100)
+  assignedToId  String?
+  campaignId    String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  // Связи
+  assignedTo    User?       @relation(fields: [assignedToId], references: [id])
+  activities    Activity[]
+  opportunities Opportunity[]
+  tags          Tag[]
+  campaign      Campaign?   @relation(fields: [campaignId], references: [id])
+
+  @@map("leads")
+}
+
+// Источник лида
+enum LeadSource {
+  WEBSITE
+  SOCIAL_MEDIA
+  REFERRAL
+  COLD_CALL
+  EMAIL
+  TRADE_SHOW
+  PARTNER
+  OTHER
+}
+
+// Статус лида
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  PROPOSAL
+  NEGOTIATION
+  CLOSED_WON
+  CLOSED_LOST
+}
+
+// Приоритет
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+// Модель контакта
+model Contact {
+  id            String     @id @default(cuid())
+  firstName     String
+  lastName      String
+  email         String?    @unique
+  phone         String?
+  mobile        String?
+  position      String?
+  company       String?
+  address       String?
+  city          String?
+  region        String?
+  birthday      DateTime?
+  notes         String?
+  isActive      Boolean    @default(true)
+  createdById   String
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  // Связи
+  createdBy     User       @relation(fields: [createdById], references: [id])
+  activities    Activity[]
+  accounts      Account[]  @relation("AccountContacts")
+  tags          Tag[]
+
+  @@map("contacts")
+}
+
+// Модель аккаунта/компании
+model Account {
+  id            String        @id @default(cuid())
+  name          String
+  website       String?
+  phone         String?
+  email         String?
+  address       String?
+  city          String?
+  region        String?
+  industry      String?       // Отрасль
+  employees     Int?          // Количество сотрудников
+  revenue       Float?        // Годовой доход
+  description   String?
+  status        AccountStatus @default(ACTIVE)
+  ownerId       String
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  // Связи
+  owner         User          @relation("AccountOwner", fields: [ownerId], references: [id])
+  contacts      Contact[]     @relation("AccountContacts")
+  opportunities Opportunity[]
+  activities    Activity[]
+
+  @@map("accounts")
+}
+
+// Статус аккаунта
+enum AccountStatus {
+  ACTIVE
+  INACTIVE
+  PROSPECT
+  CUSTOMER
+  FORMER_CUSTOMER
+}
+
+// Модель возможности/сделки
+model Opportunity {
+  id            String           @id @default(cuid())
+  name          String
+  description   String?
+  amount        Float
+  currency      String           @default("RUB")
+  stage         OpportunityStage @default(PROSPECTING)
+  probability   Int              @default(0) // Вероятность закрытия (0-100)
+  closeDate     DateTime?
+  leadId        String?
+  accountId     String?
+  assignedToId  String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  // Связи
+  lead          Lead?            @relation(fields: [leadId], references: [id])
+  account       Account?         @relation(fields: [accountId], references: [id])
+  assignedTo    User?            @relation(fields: [assignedToId], references: [id])
+  activities    Activity[]
+  tasks         Task[]
+  products      OpportunityProduct[]
+
+  @@map("opportunities")
+}
+
+// Этапы сделки
+enum OpportunityStage {
+  PROSPECTING
+  QUALIFICATION
+  PROPOSAL
+  NEGOTIATION
+  CLOSED_WON
+  CLOSED_LOST
+}
+
+// Продукты в сделке
+model OpportunityProduct {
+  id             String  @id @default(cuid())
+  opportunityId  String
+  productId      String
+  quantity       Int     @default(1)
+  unitPrice      Float
+  discount       Float   @default(0)
+
+  // Связи
+  opportunity    Opportunity @relation(fields: [opportunityId], references: [id])
+  product        Product     @relation(fields: [productId], references: [id])
+
+  @@unique([opportunityId, productId])
+  @@map("opportunity_products")
+}
+
+// Модель продукта
+model Product {
+  id            String     @id @default(cuid())
+  name          String
+  description   String?
+  price         Float
+  cost          Float?
+  category      String?
+  sku           String?    @unique
+  isActive      Boolean    @default(true)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  // Связи
+  opportunities OpportunityProduct[]
+
+  @@map("products")
+}
+
+// Модель задачи
+model Task {
+  id            String     @id @default(cuid())
+  title         String
+  description   String?
+  status        TaskStatus @default(OPEN)
+  priority      Priority   @default(MEDIUM)
+  type          TaskType   @default(TASK)
+  dueDate       DateTime?
+  assignedToId  String?
+  opportunityId String?
+  createdById   String
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  // Связи
+  assignedTo    User?      @relation("TaskAssignee", fields: [assignedToId], references: [id])
+  opportunity   Opportunity? @relation(fields: [opportunityId], references: [id])
+  createdBy     User       @relation("TaskCreator", fields: [createdById], references: [id])
+  activities    Activity[]
+
+  @@map("tasks")
+}
+
+// Статус задачи
+enum TaskStatus {
+  OPEN
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+// Тип задачи
+enum TaskType {
+  CALL
+  EMAIL
+  MEETING
+  TASK
+  FOLLOW_UP
+}
+
+// Модель активности (история взаимодействий)
+model Activity {
+  id            String       @id @default(cuid())
+  type          ActivityType
+  subject       String
+  description   String?
+  leadId        String?
+  contactId     String?
+  accountId     String?
+  opportunityId String?
+  taskId        String?
+  userId        String
+  createdAt     DateTime     @default(now())
+
+  // Связи
+  lead          Lead?        @relation(fields: [leadId], references: [id])
+  contact       Contact?     @relation(fields: [contactId], references: [id])
+  account       Account?     @relation(fields: [accountId], references: [id])
+  opportunity   Opportunity? @relation(fields: [opportunityId], references: [id])
+  task          Task?        @relation(fields: [taskId], references: [id])
+  user          User         @relation(fields: [userId], references: [id])
+
+  @@map("activities")
+}
+
+// Тип активности
+enum ActivityType {
+  NOTE
+  CALL
+  EMAIL
+  MEETING
+  TASK_CREATED
+  TASK_COMPLETED
+  LEAD_CREATED
+  OPPORTUNITY_CREATED
+  STATUS_CHANGED
+}
+
+// Модель кампании маркетинга
+model Campaign {
+  id            String         @id @default(cuid())
+  name          String
+  description   String?
+  type          CampaignType
+  status        CampaignStatus @default(PLANNING)
+  budget        Float?
+  startDate     DateTime?
+  endDate       DateTime?
+  createdById   String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  // Связи
+  createdBy     User           @relation(fields: [createdById], references: [id])
+  leads         Lead[]
+
+  @@map("campaigns")
+}
+
+// Тип кампании
+enum CampaignType {
+  EMAIL
+  SOCIAL_MEDIA
+  WEBINAR
+  TRADE_SHOW
+  DIRECT_MAIL
+  CONTENT_MARKETING
+  PPC
+}
+
+// Статус кампании
+enum CampaignStatus {
+  PLANNING
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+// Модель отчёта
+model Report {
+  id            String      @id @default(cuid())
+  name          String
+  type          ReportType
+  config        String      // JSON конфигурация отчёта
+  isPublic      Boolean     @default(false)
+  createdById   String
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  // Связи
+  createdBy     User        @relation(fields: [createdById], references: [id])
+
+  @@map("reports")
+}
+
+// Тип отчёта
+enum ReportType {
+  SALES_PERFORMANCE
+  LEAD_ANALYSIS
+  OPPORTUNITY_PIPELINE
+  CUSTOMER_ANALYSIS
+  ACTIVITY_REPORT
+  REVENUE_REPORT
+}
+
+// Модель тега
+model Tag {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  color     String   @default("#3B82F6")
+  createdAt DateTime @default(now())
+
+  // Связи
+  leads     Lead[]
+  contacts  Contact[]
+
+  @@map("tags")
+}
+
+// Модель сессии для NextAuth
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+// Модель токена верификации для NextAuth
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
