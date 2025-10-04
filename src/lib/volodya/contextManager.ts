@@ -141,6 +141,16 @@ export class ContextManager {
   }
 
   /**
+   * Очистка контекста для сессии
+   */
+  static clearContext(sessionId: string): void {
+    if (this.sessions.has(sessionId)) {
+      this.sessions.delete(sessionId)
+      this.saveSessions()
+    }
+  }
+
+  /**
    * Получает статистику по сессиям
    */
   static getStats(): { activeSessions: number; totalMessages: number } {
