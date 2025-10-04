@@ -14,14 +14,14 @@ export async function GET(
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.id) {
+    if (!session?.user?.email) {
       return NextResponse.json({ error: "Не авторизован" }, { status: 401 })
     }
 
     const opportunity = await prisma.opportunity.findFirst({
       where: {
         id: params.id,
-        userId: session.user.id
+        assignedToId: session.user.email
       },
       include: {
         lead: {
@@ -58,7 +58,7 @@ export async function PUT(
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.id) {
+    if (!session?.user?.email) {
       return NextResponse.json({ error: "Не авторизован" }, { status: 401 })
     }
 
@@ -68,7 +68,7 @@ export async function PUT(
     const existingOpportunity = await prisma.opportunity.findFirst({
       where: {
         id: params.id,
-        userId: session.user.id
+        assignedToId: session.user.email
       }
     })
 
@@ -119,7 +119,7 @@ export async function DELETE(
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.id) {
+    if (!session?.user?.email) {
       return NextResponse.json({ error: "Не авторизован" }, { status: 401 })
     }
 
@@ -127,7 +127,7 @@ export async function DELETE(
     const existingOpportunity = await prisma.opportunity.findFirst({
       where: {
         id: params.id,
-        userId: session.user.id
+        assignedToId: session.user.email
       }
     })
 

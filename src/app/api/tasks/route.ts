@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search")
 
     const where: any = {
-      userId: session.user.id
+      userId: session.user.email
     }
 
     if (status && status !== "ALL") {
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
         dueDate: data.dueDate ? new Date(data.dueDate) : null,
         leadId: data.leadId || null,
         dealId: data.dealId || null,
-        userId: session.user.id
+        userId: session.user.email
       },
       include: {
         lead: {
@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
       data: {
         type: "TASK_CREATED",
         subject: `Создана задача: ${task.title}`,
-        userId: session.user.id,
+        userId: session.user.email,
         taskId: task.id
       }
     })

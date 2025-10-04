@@ -22,7 +22,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const lead = await prisma.lead.findFirst({
       where: {
         id: params.id,
-        assignedToId: session.user.id
+        assignedToId: session.user.email
       },
       include: {
         assignedTo: {
@@ -75,7 +75,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const existingLead = await prisma.lead.findFirst({
       where: {
         id: params.id,
-        assignedToId: session.user.id
+        assignedToId: session.user.email
       }
     })
 
@@ -117,7 +117,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         type: "STATUS_CHANGED",
         subject: `Обновлён лид: ${lead.firstName} ${lead.lastName}`,
         description: `Статус изменён на: ${lead.status}`,
-        userId: session.user.id,
+        userId: session.user.email,
         leadId: lead.id
       }
     })
@@ -145,7 +145,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     const existingLead = await prisma.lead.findFirst({
       where: {
         id: params.id,
-        assignedToId: session.user.id
+        assignedToId: session.user.email
       }
     })
 

@@ -21,7 +21,7 @@ export async function GET(
     const task = await prisma.task.findFirst({
       where: {
         id: params.id,
-        userId: session.user.id
+        userId: session.user.email
       },
       include: {
         lead: {
@@ -65,7 +65,7 @@ export async function PUT(
     const existingTask = await prisma.task.findFirst({
       where: {
         id: params.id,
-        userId: session.user.id
+        userId: session.user.email
       }
     })
 
@@ -121,7 +121,7 @@ export async function DELETE(
     const existingTask = await prisma.task.findFirst({
       where: {
         id: params.id,
-        userId: session.user.id
+        userId: session.user.email
       }
     })
 

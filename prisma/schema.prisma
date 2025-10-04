@@ -39,6 +39,15 @@ model User {
   sessions         Session[]
   sentMessages     Message[]     @relation("MessageSender")
   receivedMessages Message[]     @relation("MessageRecipient")
+  events           Event[]
+
+  // Двухфакторная аутентификация
+  twoFactorEnabled      Boolean     @default(false)
+  twoFactorMethod       String?     // 'totp', 'sms'
+  twoFactorSecret       String?     // TOTP секрет
+  twoFactorBackupCodes  String?     // JSON строка с хешированными резервными кодами
+  twoFactorEnabledAt    DateTime?
+  twoFactorLastUsed     DateTime?
 
   @@map("users")
 }
@@ -79,8 +88,10 @@ model Lead {
   assignedTo    User?         @relation(fields: [assignedToId], references: [id])
   activities    Activity[]
   opportunities Opportunity[]
+  tasks         Task[]
   tags          Tag[]
   campaign      Campaign?     @relation(fields: [campaignId], references: [id])
+  events        Event[]
 
   @@map("leads")
 }
@@ -141,6 +152,7 @@ model Contact {
   activities Activity[]
   accounts   Account[]  @relation("AccountContacts")
   tags       Tag[]
+  events     Event[]
 
   @@map("contacts")
 }
@@ -169,6 +181,7 @@ model Account {
   contacts      Contact[]     @relation("AccountContacts")
   opportunities Opportunity[]
   activities    Activity[]
+  events        Event[]
 
   @@map("accounts")
 }
@@ -266,6 +279,7 @@ model Task {
   dueDate       DateTime?
   assignedToId  String?
   opportunityId String?
+  leadId       String?
   createdById   String
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
@@ -273,6 +287,7 @@ model Task {
   // Связи
   assignedTo  User?        @relation("TaskAssignee", fields: [assignedToId], references: [id])
   opportunity Opportunity? @relation(fields: [opportunityId], references: [id])
+  lead        Lead?        @relation(fields: [leadId], references: [id])
   createdBy   User         @relation("TaskCreator", fields: [createdById], references: [id])
   activities  Activity[]
 
@@ -333,6 +348,16 @@ enum ActivityType {
   OPPORTUNITY_CREATED
   STATUS_CHANGED
   MESSAGE_SENT
+  EMAIL_SENT
+  EVENT_UPDATED
+  EVENT_DELETED
+  DEAL_CREATED
+  DEAL_UPDATED
+  DEAL_CLOSED
+  CONTACT_CREATED
+  CONTACT_UPDATED
+  ACCOUNT_CREATED
+  ACCOUNT_UPDATED
 }
 
 // Модель кампании маркетинга
@@ -441,6 +466,66 @@ enum MessageType {
   FILE
   IMAGE
   SYSTEM
+}
+
+// Типы событий календаря
+enum EventType {
+  MEETING
+  CALL
+  DEMO
+  TASK
+  REMINDER
+  OTHER
+}
+
+// Статусы событий
+enum EventStatus {
+  CONFIRMED
+  TENTATIVE
+  CANCELLED
+}
+
+// Типы повторения событий
+enum RecurrenceType {
+  DAILY
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+// Модель события календаря
+model Event {
+  id          String         @id @default(cuid())
+  title       String
+  description String?
+  type        EventType      @default(MEETING)
+  startDate   DateTime
+  endDate     DateTime?
+  location    String?
+  attendees   String?        // JSON строка с массивом участников
+  status      EventStatus    @default(CONFIRMED)
+
+  // Повторяющиеся события
+  isRecurring Boolean        @default(false)
+  recurrenceType RecurrenceType? // daily, weekly, monthly, yearly
+  recurrenceInterval Int?    // Каждый N-й день/неделю/месяц
+  recurrenceEndDate DateTime? // Дата окончания повторений
+  recurrenceDays String?     // JSON строка с днями недели для weekly
+
+  // Связи
+  userId      String
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  leadId      String?
+  lead        Lead?          @relation(fields: [leadId], references: [id])
+  contactId   String?
+  contact     Contact?       @relation(fields: [contactId], references: [id])
+  accountId   String?
+  account     Account?       @relation(fields: [accountId], references: [id])
+
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@map("events")
 }
 
 // Модель сессии для NextAuth

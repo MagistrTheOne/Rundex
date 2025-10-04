@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get("status")
 
     const where: any = {
-      ownerId: session.user.id
+      ownerId: session.user.email
     }
 
     if (search) {
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
         revenue: data.revenue ? parseFloat(data.revenue) : null,
         description: data.description,
         status: data.status || "ACTIVE",
-        ownerId: session.user.id
+        ownerId: session.user.email
       },
       include: {
         contacts: {

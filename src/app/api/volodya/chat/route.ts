@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Получение данных пользователя для контекста
-    const userData = await getUserCRMData(session.user.id)
+    const userData = await getUserCRMData(session.user.email)
 
     // Анализ запроса и генерация ответа
     const response = await generateVolodyaResponse(message, userData, context)
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
         type: "NOTE",
         subject: "Запрос к AI-ассистенту Володе",
         description: `Вопрос: ${message.substring(0, 100)}${message.length > 100 ? '...' : ''}`,
-        userId: session.user.id
+        userId: session.user.email
       }
     })
 

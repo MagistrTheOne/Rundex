@@ -21,7 +21,7 @@ export async function GET(
     const deal = await prisma.deal.findFirst({
       where: {
         id: params.id,
-        userId: session.user.id
+        userId: session.user.email
       },
       include: {
         lead: {
@@ -65,7 +65,7 @@ export async function PUT(
     const existingDeal = await prisma.deal.findFirst({
       where: {
         id: params.id,
-        userId: session.user.id
+        userId: session.user.email
       }
     })
 
@@ -120,7 +120,7 @@ export async function DELETE(
     const existingDeal = await prisma.deal.findFirst({
       where: {
         id: params.id,
-        userId: session.user.id
+        userId: session.user.email
       }
     })
 

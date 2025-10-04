@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search")
 
     const where: any = {
-      assignedToId: session.user.id
+      assignedToId: session.user.email
     }
 
     if (status && status !== "ALL") {
@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
         priority: data.priority || "MEDIUM",
         budget: data.budget ? parseFloat(data.budget) : null,
         notes: data.notes,
-        assignedToId: session.user.id,
+        assignedToId: session.user.email,
         score: Math.floor(Math.random() * 40) + 60 // Простой алгоритм скоринга
       },
       include: {
@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
       data: {
         type: "LEAD_CREATED",
         subject: `Создан лид: ${lead.firstName} ${lead.lastName}`,
-        userId: session.user.id,
+        userId: session.user.email,
         leadId: lead.id
       }
     })

@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.id) {
+    if (!session?.user?.email) {
       return NextResponse.json({ error: "Не авторизован" }, { status: 401 })
     }
 
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search")
 
     const where: any = {
-      userId: session.user.id
+      userId: session.user.email
     }
 
     if (status && status !== "ALL") {
@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
       ]
     }
 
-    const deals = await prisma.deal.findMany({
+    const deals = await prisma.opportunity.findMany({
       where,
       include: {
         lead: {
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.id) {
+    if (!session?.user?.email) {
       return NextResponse.json({ error: "Не авторизован" }, { status: 401 })
     }
 
@@ -85,18 +85,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Создание сделки
-    const deal = await prisma.deal.create({
+    const deal = await prisma.opportunity.create({
       data: {
-        title: data.title,
+        name: data.title,
         description: data.description,
-        value: data.value ? parseFloat(data.value) : 0,
+        amount: data.value ? parseFloat(data.value) : 0,
         currency: data.currency || "RUB",
-        status: data.status || "NEW",
-        priority: data.priority || "MEDIUM",
-        stage: data.stage || "QUALIFICATION",
-        expectedCloseDate: data.expectedCloseDate ? new Date(data.expectedCloseDate) : null,
+        stage: data.stage || "PROSPECTING",
+        probability: data.probability || 50,
+        closeDate: data.closeDate ? new Date(data.closeDate) : null,
         leadId: data.leadId,
-        userId: session.user.id
+        assignedToId: session.user.email
       },
       include: {
         lead: {
@@ -108,10 +107,10 @@ export async function POST(request: NextRequest) {
     // Создание активности
     await prisma.activity.create({
       data: {
-        type: "DEAL_CREATED",
-        subject: `Создана сделка: ${deal.title}`,
-        userId: session.user.id,
-        dealId: deal.id
+        type: "OPPORTUNITY_CREATED",
+        subject: `Создана сделка: ${deal.name}`,
+        userId: session.user.email,
+        opportunityId: deal.id
       }
     })
 

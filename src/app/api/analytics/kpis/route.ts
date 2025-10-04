@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { getCachedKPIs, CACHE_KEYS } from "@/lib/cache/cache-service"
 
 // GET /api/analytics/kpis - Получить KPI метрики пользователя
 export async function GET(request: NextRequest) {
@@ -48,16 +49,18 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Пользователь не найден" }, { status: 404 })
     }
 
-    // Расчет KPI метрик
-    const [
-      leadsCount,
-      opportunitiesCount,
-      accountsCount,
-      closedOpportunities,
-      totalRevenue,
-      previousLeadsCount,
-      previousRevenue
-    ] = await Promise.all([
+    // Получаем KPI с кешированием
+    const kpis = await getCachedKPIs(user.id, period, async () => {
+      // Расчет KPI метрик
+      const [
+        leadsCount,
+        opportunitiesCount,
+        accountsCount,
+        closedOpportunities,
+        totalRevenue,
+        previousLeadsCount,
+        previousRevenue
+      ] = await Promise.all([
       // Количество лидов за период
       prisma.lead.count({
         where: {
@@ -145,62 +148,53 @@ export async function GET(request: NextRequest) {
     // Расчет средней суммы сделки
     const avgDealSize = closedOpportunities > 0 ? (totalRevenue._sum.amount || 0) / closedOpportunities : 0
 
-    // Расчет продолжительности цикла продаж (среднее время от создания до закрытия)
-    const avgSalesCycle = await prisma.opportunity.aggregate({
-      where: {
-        assignedToId: user.id,
-        stage: "CLOSED_WON",
-        createdAt: { gte: startDate }
-      },
-      _avg: {
-        createdAt: true
+      const kpis = {
+        totalRevenue: {
+          value: totalRevenue._sum.amount || 0,
+          change: revenueChange,
+          trend: revenueChange >= 0 ? "up" : "down",
+          period: period
+        },
+        leadsCount: {
+          value: leadsCount,
+          change: leadsChange,
+          trend: leadsChange >= 0 ? "up" : "down",
+          period: period
+        },
+        opportunitiesCount: {
+          value: opportunitiesCount,
+          change: 0, // Пока без расчета изменения
+          trend: "neutral",
+          period: period
+        },
+        conversionRate: {
+          value: conversionRate,
+          change: 0, // Пока без расчета изменения
+          trend: "neutral",
+          period: period
+        },
+        accountsCount: {
+          value: accountsCount,
+          change: 0, // Пока без расчета изменения
+          trend: "neutral",
+          period: period
+        },
+        avgDealSize: {
+          value: avgDealSize,
+          change: 0, // Пока без расчета изменения
+          trend: "neutral",
+          period: period
+        },
+        closedDeals: {
+          value: closedOpportunities,
+          change: 0, // Пока без расчета изменения
+          trend: "neutral",
+          period: period
+        }
       }
-    })
 
-    const kpis = {
-      totalRevenue: {
-        value: totalRevenue._sum.amount || 0,
-        change: revenueChange,
-        trend: revenueChange >= 0 ? "up" : "down",
-        period: period
-      },
-      leadsCount: {
-        value: leadsCount,
-        change: leadsChange,
-        trend: leadsChange >= 0 ? "up" : "down",
-        period: period
-      },
-      opportunitiesCount: {
-        value: opportunitiesCount,
-        change: 0, // Пока без расчета изменения
-        trend: "neutral",
-        period: period
-      },
-      conversionRate: {
-        value: conversionRate,
-        change: 0, // Пока без расчета изменения
-        trend: "neutral",
-        period: period
-      },
-      accountsCount: {
-        value: accountsCount,
-        change: 0, // Пока без расчета изменения
-        trend: "neutral",
-        period: period
-      },
-      avgDealSize: {
-        value: avgDealSize,
-        change: 0, // Пока без расчета изменения
-        trend: "neutral",
-        period: period
-      },
-      closedDeals: {
-        value: closedOpportunities,
-        change: 0, // Пока без расчета изменения
-        trend: "neutral",
-        period: period
-      }
-    }
+      return kpis
+    })
 
     return NextResponse.json(kpis)
   } catch (error) {

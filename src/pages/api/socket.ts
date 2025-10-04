@@ -146,6 +146,7 @@ const SocketHandler = async (req: NextApiRequest, res: NextApiResponseWithSocket
         await prisma.activity.create({
           data: {
             type: 'MESSAGE_SENT' as any,
+            subject: 'Сообщение отправлено',
             description: `Отправлено сообщение пользователю ${recipient.name || recipient.email}`,
             userId: socket.userId!
           }

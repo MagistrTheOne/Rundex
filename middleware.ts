@@ -3,14 +3,23 @@
 
 import { withAuth } from "next-auth/middleware"
 import { NextResponse } from "next/server"
+import { rateLimitMiddleware } from "@/middleware/rate-limit"
 
 export default withAuth(
-  function middleware(req) {
+  async function middleware(req) {
     const token = req.nextauth.token
     const isAuth = !!token
     const isAuthPage = req.nextUrl.pathname.startsWith('/auth')
     const isApiRoute = req.nextUrl.pathname.startsWith('/api')
     const isDashboardRoute = req.nextUrl.pathname.startsWith('/dashboard')
+
+    // Применяем rate limiting для API запросов
+    if (isApiRoute) {
+      const rateLimitResult = await rateLimitMiddleware(req)
+      if (rateLimitResult instanceof NextResponse) {
+        return rateLimitResult
+      }
+    }
 
     // Перенаправление неавторизованных пользователей с защищенных страниц
     if (isAuthPage && isAuth) {

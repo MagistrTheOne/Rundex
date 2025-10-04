@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
+import { generatePDFReport } from "@/lib/pdf/report-generator"
 import { prisma } from "@/lib/prisma"
 
 // GET /api/reports/generate - Генерировать отчет
@@ -107,7 +108,30 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Для JSON и PDF возвращаем данные
+    if (format === "pdf") {
+      // Генерируем PDF отчет
+      const pdfBlob = await generatePDFReport({
+        title: reportTitle,
+        type: reportType as any,
+        dateRange: {
+          start: dateFilter.gte?.toISOString().split('T')[0] || '',
+          end: dateFilter.lte?.toISOString().split('T')[0] || ''
+        },
+        generatedAt: new Date().toISOString(),
+        generatedBy: user.name || user.email,
+        data: reportData.data || reportData,
+        summary: reportData.summary
+      })
+
+      return new Response(pdfBlob, {
+        headers: {
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': `attachment; filename="${reportTitle.toLowerCase().replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf"`
+        }
+      })
+    }
+
+    // Для JSON возвращаем данные
     const report = {
       title: reportTitle,
       description: reportDescription,

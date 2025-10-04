@@ -21,7 +21,7 @@ export async function GET(
     const contact = await prisma.contact.findFirst({
       where: {
         id: params.id,
-        userId: session.user.id
+        userId: session.user.email
       },
       include: {
         leads: {
@@ -62,7 +62,7 @@ export async function PUT(
     const existingContact = await prisma.contact.findFirst({
       where: {
         id: params.id,
-        userId: session.user.id
+        userId: session.user.email
       }
     })
 
@@ -119,7 +119,7 @@ export async function DELETE(
     const existingContact = await prisma.contact.findFirst({
       where: {
         id: params.id,
-        userId: session.user.id
+        userId: session.user.email
       }
     })
 

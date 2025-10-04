@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search")
 
     const where: any = {
-      userId: session.user.id
+      userId: session.user.email
     }
 
     if (search) {
@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
         city: data.city,
         region: data.region,
         notes: data.notes,
-        userId: session.user.id
+        userId: session.user.email
       },
       include: {
         leads: {
