@@ -30,6 +30,8 @@ import {
   Clock
 } from "lucide-react"
 import { motion } from "framer-motion"
+import { useSocket } from "@/hooks/use-socket"
+import { usePushNotifications } from "@/hooks/use-push-notifications"
 
 // Типы данных
 interface Message {
@@ -39,11 +41,13 @@ interface Message {
     name: string
     avatar?: string
     role: string
+    email?: string
   }
   content: string
   timestamp: string
   type: 'text' | 'file' | 'system'
   status: 'sent' | 'delivered' | 'read'
+  isRead?: boolean
 }
 
 interface Conversation {
@@ -174,34 +178,144 @@ const mockNotifications: Notification[] = [
 
 export default function MessagesPage() {
   const [activeTab, setActiveTab] = useState("chat")
-  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(mockConversations[0])
-  const [messages, setMessages] = useState<Message[]>(mockMessages)
+  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null)
+  const [messages, setMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState("")
   const [notifications, setNotifications] = useState<Notification[]>(mockNotifications)
   const [searchQuery, setSearchQuery] = useState("")
+  const [conversations, setConversations] = useState<Conversation[]>([])
+  const [isLoading, setIsLoading] = useState(true)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  // WebSocket интеграция
+  const {
+    isConnected,
+    sendMessage: socketSendMessage,
+    markAsRead,
+    startTyping,
+    stopTyping,
+    typingUsers
+  } = useSocket()
+
+  // Push-уведомления
+  const {
+    isSupported: pushSupported,
+    isSubscribed: pushSubscribed,
+    permission: pushPermission,
+    requestPermission,
+    subscribeToNotifications,
+    unsubscribeFromNotifications,
+    showTestNotification
+  } = usePushNotifications()
+
+  // Обработка real-time событий
+  useEffect(() => {
+    if (!isConnected) return
+
+    const handleNewMessage = (data: { conversationId: string; message: any }) => {
+      console.log('New message received:', data)
+
+      // Обновляем список бесед
+      setConversations(prev =>
+        prev.map(conv =>
+          conv.id === data.conversationId
+            ? {
+                ...conv,
+                lastMessage: {
+                  id: data.message.id,
+                  content: data.message.content,
+                  type: data.message.type,
+                  sender: data.message.sender,
+                  timestamp: data.message.timestamp,
+                  isRead: data.message.isRead,
+                  status: 'delivered' as const
+                },
+                unreadCount: conv.id === selectedConversation?.id ? 0 : conv.unreadCount + 1
+              }
+            : conv
+        )
+      )
+
+      // Если это текущая беседа, добавляем сообщение
+      if (selectedConversation && data.conversationId === selectedConversation.id) {
+        const newMessage: Message = {
+          id: data.message.id,
+          content: data.message.content,
+          type: data.message.type,
+          sender: data.message.sender,
+          timestamp: data.message.timestamp,
+          isRead: true,
+          status: 'delivered'
+        }
+        setMessages(prev => [...prev, newMessage])
+      }
+    }
+
+    // Подписываемся на события (в реальном приложении это делается в хуке)
+    // Здесь просто имитация, реальная подписка происходит в useSocket
+    const socketCleanup = () => {
+      // Cleanup if needed
+    }
+
+    return socketCleanup
+  }, [isConnected, selectedConversation])
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }
+
+  // Загрузка бесед при монтировании компонента
+  useEffect(() => {
+    const loadConversations = async () => {
+      try {
+        setIsLoading(true)
+        const response = await fetch('/api/messages/conversations')
+        if (response.ok) {
+          const data = await response.json()
+          setConversations(data)
+          // Автоматически выбираем первую беседу
+          if (data.length > 0 && !selectedConversation) {
+            setSelectedConversation(data[0])
+          }
+        }
+      } catch (error) {
+        console.error('Error loading conversations:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadConversations()
+  }, [])
+
+  // Загрузка сообщений при выборе беседы
+  useEffect(() => {
+    if (!selectedConversation) return
+
+    const loadMessages = async () => {
+      try {
+        const response = await fetch(`/api/messages/conversation/${selectedConversation.id}`)
+        if (response.ok) {
+          const data = await response.json()
+          setMessages(data.messages || [])
+        }
+      } catch (error) {
+        console.error('Error loading messages:', error)
+      }
+    }
+
+    loadMessages()
+  }, [selectedConversation])
 
   useEffect(() => {
     scrollToBottom()
   }, [messages])
 
   const sendMessage = () => {
-    if (!newMessage.trim()) return
+    if (!newMessage.trim() || !selectedConversation || !isConnected) return
 
-    const message: Message = {
-      id: Date.now().toString(),
-      sender: { id: "current", name: "Администратор", role: "Администратор" },
-      content: newMessage,
-      timestamp: new Date().toISOString(),
-      type: "text",
-      status: "sent"
-    }
-
-    setMessages([...messages, message])
+    // Используем WebSocket для отправки сообщения
+    socketSendMessage(selectedConversation.id, newMessage, 'TEXT')
     setNewMessage("")
   }
 
@@ -211,6 +325,21 @@ export default function MessagesPage() {
     ))
   }
 
+  // Управление push-уведомлениями
+  const handleNotificationToggle = async () => {
+    try {
+      if (pushPermission === 'default') {
+        await requestPermission()
+      } else if (pushPermission === 'granted' && !pushSubscribed) {
+        await subscribeToNotifications()
+      } else if (pushSubscribed) {
+        await unsubscribeFromNotifications()
+      }
+    } catch (error) {
+      console.error('Failed to toggle notifications:', error)
+    }
+  }
+
   const unreadNotificationsCount = notifications.filter(n => !n.read).length
 
   return (
@@ -218,10 +347,45 @@ export default function MessagesPage() {
       {/* Заголовок */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold text-white">Сообщения</h2>
+          <h2 className="text-3xl font-bold text-white flex items-center">
+            Сообщения
+            <div className={`ml-3 w-2 h-2 rounded-full ${
+              isConnected ? 'bg-green-400' : 'bg-red-400'
+            }`} />
+          </h2>
           <p className="text-white/70 mt-1">
             Общение, уведомления и история взаимодействия
+            <span className={`ml-2 text-sm ${
+              isConnected ? 'text-green-400' : 'text-red-400'
+            }`}>
+              {isConnected ? '● Онлайн' : '● Оффлайн'}
+            </span>
           </p>
+          <div className="flex items-center space-x-2 mt-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleNotificationToggle}
+              disabled={!pushSupported}
+              className={`text-xs border-white/20 ${
+                pushSubscribed ? 'bg-green-500/20 text-green-400 border-green-500/50' : 'text-white/70 hover:bg-white/10'
+              }`}
+            >
+              {pushPermission === 'denied' ? '🚫' : pushSubscribed ? '🔔' : '🔕'}
+              {pushPermission === 'denied' ? 'Запрещены' :
+               pushSubscribed ? 'Включены' : 'Отключены'}
+            </Button>
+            {pushSubscribed && (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={showTestNotification}
+                className="text-xs text-white/70 hover:bg-white/10"
+              >
+                Тест
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -280,10 +444,15 @@ export default function MessagesPage() {
 
                     <ScrollArea className="flex-1">
                       <div className="p-2">
-                        {mockConversations.map((conversation) => (
+                        {conversations.map((conversation) => (
                           <div
                             key={conversation.id}
-                            onClick={() => setSelectedConversation(conversation)}
+                            onClick={() => {
+                              setSelectedConversation(conversation)
+                              if (conversation.unreadCount > 0) {
+                                markAsRead(conversation.id)
+                              }
+                            }}
                             className={`p-3 rounded-lg cursor-pointer mb-2 transition-colors ${
                               selectedConversation?.id === conversation.id
                                 ? 'bg-white/20'
@@ -390,6 +559,27 @@ export default function MessagesPage() {
                                 </div>
                               </div>
                             ))}
+
+                            {/* Индикатор печати */}
+                            {typingUsers.length > 0 && (
+                              <div className="flex justify-start">
+                                <div className="flex space-x-3 max-w-[80%]">
+                                  <Avatar className="w-8 h-8">
+                                    <AvatarFallback className="bg-blue-500/20 text-blue-400">
+                                      <MessageSquare className="w-4 h-4" />
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div className="glass-card rounded-lg p-3 text-white">
+                                    <div className="flex space-x-2">
+                                      <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"></div>
+                                      <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                                      <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
                             <div ref={messagesEndRef} />
                           </div>
                         </ScrollArea>
@@ -404,6 +594,8 @@ export default function MessagesPage() {
                               value={newMessage}
                               onChange={(e) => setNewMessage(e.target.value)}
                               onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                              onFocus={() => selectedConversation && startTyping(selectedConversation.id)}
+                              onBlur={() => selectedConversation && stopTyping(selectedConversation.id)}
                               placeholder="Введите сообщение..."
                               className="flex-1 bg-white/10 border-white/20 text-white placeholder:text-white/50"
                             />

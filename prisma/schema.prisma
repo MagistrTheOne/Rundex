@@ -13,30 +13,32 @@ datasource db {
 
 // Модель пользователя
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  name          String?
-  password      String
-  role          UserRole  @default(USER)
-  avatar        String?
-  phone         String?
-  position      String?   // Должность
-  department    String?   // Отдел
-  isActive      Boolean   @default(true)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id         String   @id @default(cuid())
+  email      String   @unique
+  name       String?
+  password   String
+  role       UserRole @default(USER)
+  avatar     String?
+  phone      String?
+  position   String? // Должность
+  department String? // Отдел
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   // Связи
-  leads         Lead[]
-  contacts      Contact[]
-  assignedTasks Task[]     @relation("TaskAssignee")
-  createdTasks  Task[]     @relation("TaskCreator")
-  activities    Activity[]
-  accounts      Account[] @relation("AccountOwner")
-  opportunities Opportunity[]
-  campaigns     Campaign[]
-  reports       Report[]
-  sessions      Session[]
+  leads            Lead[]
+  contacts         Contact[]
+  assignedTasks    Task[]        @relation("TaskAssignee")
+  createdTasks     Task[]        @relation("TaskCreator")
+  activities       Activity[]
+  accounts         Account[]     @relation("AccountOwner")
+  opportunities    Opportunity[]
+  campaigns        Campaign[]
+  reports          Report[]
+  sessions         Session[]
+  sentMessages     Message[]     @relation("MessageSender")
+  receivedMessages Message[]     @relation("MessageRecipient")
 
   @@map("users")
 }
@@ -51,34 +53,34 @@ enum UserRole {
 
 // Модель лида (потенциального клиента)
 model Lead {
-  id            String      @id @default(cuid())
-  firstName     String
-  lastName      String
-  email         String?
-  phone         String?
-  company       String?
-  position      String?     // Должность
-  website       String?
-  address       String?
-  city          String?
-  region        String?     // Регион РФ
-  source        LeadSource  @default(OTHER)
-  status        LeadStatus  @default(NEW)
-  priority      Priority    @default(MEDIUM)
-  budget        Float?
-  notes         String?
-  score         Int?        // Оценка лида (0-100)
-  assignedToId  String?
-  campaignId    String?
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  id           String     @id @default(cuid())
+  firstName    String
+  lastName     String
+  email        String?
+  phone        String?
+  company      String?
+  position     String? // Должность
+  website      String?
+  address      String?
+  city         String?
+  region       String? // Регион РФ
+  source       LeadSource @default(OTHER)
+  status       LeadStatus @default(NEW)
+  priority     Priority   @default(MEDIUM)
+  budget       Float?
+  notes        String?
+  score        Int? // Оценка лида (0-100)
+  assignedToId String?
+  campaignId   String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
 
   // Связи
-  assignedTo    User?       @relation(fields: [assignedToId], references: [id])
+  assignedTo    User?         @relation(fields: [assignedToId], references: [id])
   activities    Activity[]
   opportunities Opportunity[]
   tags          Tag[]
-  campaign      Campaign?   @relation(fields: [campaignId], references: [id])
+  campaign      Campaign?     @relation(fields: [campaignId], references: [id])
 
   @@map("leads")
 }
@@ -116,51 +118,51 @@ enum Priority {
 
 // Модель контакта
 model Contact {
-  id            String     @id @default(cuid())
-  firstName     String
-  lastName      String
-  email         String?    @unique
-  phone         String?
-  mobile        String?
-  position      String?
-  company       String?
-  address       String?
-  city          String?
-  region        String?
-  birthday      DateTime?
-  notes         String?
-  isActive      Boolean    @default(true)
-  createdById   String
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+  id          String    @id @default(cuid())
+  firstName   String
+  lastName    String
+  email       String?   @unique
+  phone       String?
+  mobile      String?
+  position    String?
+  company     String?
+  address     String?
+  city        String?
+  region      String?
+  birthday    DateTime?
+  notes       String?
+  isActive    Boolean   @default(true)
+  createdById String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   // Связи
-  createdBy     User       @relation(fields: [createdById], references: [id])
-  activities    Activity[]
-  accounts      Account[]  @relation("AccountContacts")
-  tags          Tag[]
+  createdBy  User       @relation(fields: [createdById], references: [id])
+  activities Activity[]
+  accounts   Account[]  @relation("AccountContacts")
+  tags       Tag[]
 
   @@map("contacts")
 }
 
 // Модель аккаунта/компании
 model Account {
-  id            String        @id @default(cuid())
-  name          String
-  website       String?
-  phone         String?
-  email         String?
-  address       String?
-  city          String?
-  region        String?
-  industry      String?       // Отрасль
-  employees     Int?          // Количество сотрудников
-  revenue       Float?        // Годовой доход
-  description   String?
-  status        AccountStatus @default(ACTIVE)
-  ownerId       String
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  id          String        @id @default(cuid())
+  name        String
+  website     String?
+  phone       String?
+  email       String?
+  address     String?
+  city        String?
+  region      String?
+  industry    String? // Отрасль
+  employees   Int? // Количество сотрудников
+  revenue     Float? // Годовой доход
+  description String?
+  status      AccountStatus @default(ACTIVE)
+  ownerId     String
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
 
   // Связи
   owner         User          @relation("AccountOwner", fields: [ownerId], references: [id])
@@ -182,27 +184,27 @@ enum AccountStatus {
 
 // Модель возможности/сделки
 model Opportunity {
-  id            String           @id @default(cuid())
-  name          String
-  description   String?
-  amount        Float
-  currency      String           @default("RUB")
-  stage         OpportunityStage @default(PROSPECTING)
-  probability   Int              @default(0) // Вероятность закрытия (0-100)
-  closeDate     DateTime?
-  leadId        String?
-  accountId     String?
-  assignedToId  String?
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
+  id           String           @id @default(cuid())
+  name         String
+  description  String?
+  amount       Float
+  currency     String           @default("RUB")
+  stage        OpportunityStage @default(PROSPECTING)
+  probability  Int              @default(0) // Вероятность закрытия (0-100)
+  closeDate    DateTime?
+  leadId       String?
+  accountId    String?
+  assignedToId String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
 
   // Связи
-  lead          Lead?            @relation(fields: [leadId], references: [id])
-  account       Account?         @relation(fields: [accountId], references: [id])
-  assignedTo    User?            @relation(fields: [assignedToId], references: [id])
-  activities    Activity[]
-  tasks         Task[]
-  products      OpportunityProduct[]
+  lead       Lead?                @relation(fields: [leadId], references: [id])
+  account    Account?             @relation(fields: [accountId], references: [id])
+  assignedTo User?                @relation(fields: [assignedToId], references: [id])
+  activities Activity[]
+  tasks      Task[]
+  products   OpportunityProduct[]
 
   @@map("opportunities")
 }
@@ -219,16 +221,16 @@ enum OpportunityStage {
 
 // Продукты в сделке
 model OpportunityProduct {
-  id             String  @id @default(cuid())
-  opportunityId  String
-  productId      String
-  quantity       Int     @default(1)
-  unitPrice      Float
-  discount       Float   @default(0)
+  id            String @id @default(cuid())
+  opportunityId String
+  productId     String
+  quantity      Int    @default(1)
+  unitPrice     Float
+  discount      Float  @default(0)
 
   // Связи
-  opportunity    Opportunity @relation(fields: [opportunityId], references: [id])
-  product        Product     @relation(fields: [productId], references: [id])
+  opportunity Opportunity @relation(fields: [opportunityId], references: [id])
+  product     Product     @relation(fields: [productId], references: [id])
 
   @@unique([opportunityId, productId])
   @@map("opportunity_products")
@@ -236,16 +238,16 @@ model OpportunityProduct {
 
 // Модель продукта
 model Product {
-  id            String     @id @default(cuid())
-  name          String
-  description   String?
-  price         Float
-  cost          Float?
-  category      String?
-  sku           String?    @unique
-  isActive      Boolean    @default(true)
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  price       Float
+  cost        Float?
+  category    String?
+  sku         String?  @unique
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   // Связи
   opportunities OpportunityProduct[]
@@ -269,10 +271,10 @@ model Task {
   updatedAt     DateTime   @updatedAt
 
   // Связи
-  assignedTo    User?      @relation("TaskAssignee", fields: [assignedToId], references: [id])
-  opportunity   Opportunity? @relation(fields: [opportunityId], references: [id])
-  createdBy     User       @relation("TaskCreator", fields: [createdById], references: [id])
-  activities    Activity[]
+  assignedTo  User?        @relation("TaskAssignee", fields: [assignedToId], references: [id])
+  opportunity Opportunity? @relation(fields: [opportunityId], references: [id])
+  createdBy   User         @relation("TaskCreator", fields: [createdById], references: [id])
+  activities  Activity[]
 
   @@map("tasks")
 }
@@ -309,12 +311,12 @@ model Activity {
   createdAt     DateTime     @default(now())
 
   // Связи
-  lead          Lead?        @relation(fields: [leadId], references: [id])
-  contact       Contact?     @relation(fields: [contactId], references: [id])
-  account       Account?     @relation(fields: [accountId], references: [id])
-  opportunity   Opportunity? @relation(fields: [opportunityId], references: [id])
-  task          Task?        @relation(fields: [taskId], references: [id])
-  user          User         @relation(fields: [userId], references: [id])
+  lead        Lead?        @relation(fields: [leadId], references: [id])
+  contact     Contact?     @relation(fields: [contactId], references: [id])
+  account     Account?     @relation(fields: [accountId], references: [id])
+  opportunity Opportunity? @relation(fields: [opportunityId], references: [id])
+  task        Task?        @relation(fields: [taskId], references: [id])
+  user        User         @relation(fields: [userId], references: [id])
 
   @@map("activities")
 }
@@ -330,25 +332,26 @@ enum ActivityType {
   LEAD_CREATED
   OPPORTUNITY_CREATED
   STATUS_CHANGED
+  MESSAGE_SENT
 }
 
 // Модель кампании маркетинга
 model Campaign {
-  id            String         @id @default(cuid())
-  name          String
-  description   String?
-  type          CampaignType
-  status        CampaignStatus @default(PLANNING)
-  budget        Float?
-  startDate     DateTime?
-  endDate       DateTime?
-  createdById   String
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  id          String         @id @default(cuid())
+  name        String
+  description String?
+  type        CampaignType
+  status      CampaignStatus @default(PLANNING)
+  budget      Float?
+  startDate   DateTime?
+  endDate     DateTime?
+  createdById String
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
 
   // Связи
-  createdBy     User           @relation(fields: [createdById], references: [id])
-  leads         Lead[]
+  createdBy User   @relation(fields: [createdById], references: [id])
+  leads     Lead[]
 
   @@map("campaigns")
 }
@@ -375,17 +378,17 @@ enum CampaignStatus {
 
 // Модель отчёта
 model Report {
-  id            String      @id @default(cuid())
-  name          String
-  type          ReportType
-  config        String      // JSON конфигурация отчёта
-  isPublic      Boolean     @default(false)
-  createdById   String
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  id          String     @id @default(cuid())
+  name        String
+  type        ReportType
+  config      String // JSON конфигурация отчёта
+  isPublic    Boolean    @default(false)
+  createdById String
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 
   // Связи
-  createdBy     User        @relation(fields: [createdById], references: [id])
+  createdBy User @relation(fields: [createdById], references: [id])
 
   @@map("reports")
 }
@@ -408,10 +411,36 @@ model Tag {
   createdAt DateTime @default(now())
 
   // Связи
-  leads     Lead[]
-  contacts  Contact[]
+  leads    Lead[]
+  contacts Contact[]
 
   @@map("tags")
+}
+
+// Модель сообщения
+model Message {
+  id             String      @id @default(cuid())
+  content        String
+  type           MessageType @default(TEXT)
+  senderId       String
+  sender         User        @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  recipientId    String? // Для личных сообщений
+  recipient      User?       @relation("MessageRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  conversationId String? // Для групповых чатов (будущая возможность)
+  isRead         Boolean     @default(false)
+  readAt         DateTime?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@map("messages")
+}
+
+// Типы сообщений
+enum MessageType {
+  TEXT
+  FILE
+  IMAGE
+  SYSTEM
 }
 
 // Модель сессии для NextAuth

@@ -1,0 +1,74 @@
+{
+  "name": "Rundex CRM",
+  "short_name": "Rundex",
+  "description": "Комплексная CRM система для управления бизнесом",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f0f23",
+  "theme_color": "#7B61FF",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "ru-RU",
+  "categories": ["business", "productivity"],
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "16x16 32x32 48x48",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Новые лиды",
+      "short_name": "Лиды",
+      "description": "Просмотр и управление лидами",
+      "url": "/dashboard/leads",
+      "icons": [{ "src": "/favicon.ico", "sizes": "96x96" }]
+    },
+    {
+      "name": "Календарь",
+      "short_name": "Календарь",
+      "description": "Управление событиями и задачами",
+      "url": "/dashboard/calendar",
+      "icons": [{ "src": "/favicon.ico", "sizes": "96x96" }]
+    },
+    {
+      "name": "Аналитика",
+      "short_name": "Аналитика",
+      "description": "Просмотр отчетов и метрик",
+      "url": "/dashboard/analytics",
+      "icons": [{ "src": "/favicon.ico", "sizes": "96x96" }]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshot-wide.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide"
+    },
+    {
+      "src": "/screenshot-narrow.png",
+      "sizes": "375x812",
+      "type": "image/png",
+      "form_factor": "narrow"
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false,
+  "edge_side_panel": {
+    "preferred_width": 400
+  }
+}
