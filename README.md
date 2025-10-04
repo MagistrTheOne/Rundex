@@ -253,8 +253,18 @@ GIGACHAT_CLIENT_SECRET=""
 GIGACHAT_CLIENT_ID="your-client-id"
 GIGACHAT_CLIENT_SECRET="your-client-secret"
 ```
-3. Активируйте API доступ в личном кабинете
+3. **Активируйте API доступ** в личном кабинете GigaChat (важно!)
 4. Перезапустите приложение
+5. Проверьте статус: `GET /api/volodya/demo`
+6. Тестируйте подключение: `GET /api/volodya/test`
+
+### Диагностика проблем
+
+Если GigaChat не подключается:
+- ✅ Проверьте активацию API в личном кабинете
+- ✅ Убедитесь в правильности Client ID и Secret
+- ✅ Проверьте логи в `/logs/sber.log`
+- ✅ Попробуйте тестовый endpoint `/api/volodya/test`
 
 ### API Endpoints
 

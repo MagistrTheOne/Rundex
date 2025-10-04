@@ -4,10 +4,15 @@
 import { createWriteStream, existsSync, mkdirSync } from 'fs'
 import { join } from 'path'
 
+// Отключаем SSL проверку для разработки (GigaChat использует самоподписанные сертификаты)
+if (process.env.NODE_ENV === 'development') {
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
+}
+
 interface SberTokenResponse {
   access_token: string
-  expires_in: number
-  token_type: string
+  expires_at: number  // timestamp in milliseconds
+  token_type?: string
 }
 
 interface SberMessage {
@@ -44,11 +49,13 @@ class SberClient {
   private tokenExpiresAt: number | null = null
   private readonly clientId: string
   private readonly clientSecret: string
+  private readonly authKey: string
   private readonly logFile: string
 
   constructor() {
     this.clientId = process.env.GIGACHAT_CLIENT_ID || ''
     this.clientSecret = process.env.GIGACHAT_CLIENT_SECRET || ''
+    this.authKey = process.env.GIGACHAT_AUTH_KEY || ''
 
     // Создаем папку для логов если не существует
     const logDir = join(process.cwd(), 'logs')
@@ -83,33 +90,61 @@ class SberClient {
       return this.accessToken
     }
 
+    // Проверяем наличие credentials
     if (!this.clientId || !this.clientSecret) {
+      this.log('ERROR', 'GigaChat credentials not configured')
       return null
     }
 
     try {
       this.log('INFO', 'Requesting new access token')
 
-      const auth = Buffer.from(`${this.clientId}:${this.clientSecret}`).toString('base64')
+      // Используем Authorization Key если он передан, иначе формируем из Client ID и Secret
+      const authHeader = this.authKey ||
+        Buffer.from(`${this.clientId}:${this.clientSecret}`).toString('base64')
+
+      // Генерируем уникальный идентификатор запроса в формате UUID4
+      const requestId = crypto.randomUUID()
+
+      this.log('INFO', `Making OAuth request with RqUID: ${requestId}`)
+
+      // Для разработки игнорируем SSL ошибки (только в dev режиме)
+      let agent
+      try {
+        const https = require('https')
+        agent = process.env.NODE_ENV === 'development' ?
+          new https.Agent({ rejectUnauthorized: false }) : undefined
+        this.log('INFO', 'SSL agent configured for OAuth request')
+      } catch (error) {
+        this.log('WARN', 'Could not configure SSL agent for OAuth', { error: error instanceof Error ? error.message : String(error) })
+        agent = undefined
+      }
 
       const response = await fetch('https://ngw.devices.sberbank.ru:9443/api/v2/oauth', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
-          'Authorization': `Basic ${auth}`,
+          'Authorization': `Basic ${authHeader}`,
+          'RqUID': requestId,
+          'Accept': 'application/json'
         },
         body: new URLSearchParams({
           scope: 'GIGACHAT_API_PERS',
         }),
+        // @ts-ignore - для разработки
+        agent
       })
+
+      this.log('INFO', `OAuth response status: ${response.status}`)
 
       if (!response.ok) {
         const errorText = await response.text()
         this.log('ERROR', `OAuth request failed: ${response.status}`, { error: errorText })
-        throw new Error(`OAuth error: ${response.status}`)
+        throw new Error(`OAuth error: ${response.status} - ${errorText}`)
       }
 
       const data: SberTokenResponse = await response.json()
+      this.log('INFO', 'OAuth response received', { hasToken: !!data.access_token })
 
       if (!data.access_token) {
         this.log('ERROR', 'No access_token in OAuth response', data)
@@ -117,14 +152,22 @@ class SberClient {
       }
 
       this.accessToken = data.access_token
-      // Токен действует expires_in секунд, вычитаем 5 минут для безопасности
-      this.tokenExpiresAt = Date.now() + (data.expires_in - 300) * 1000
+
+      // Используем expires_at из ответа (в миллисекундах)
+      if (data.expires_at) {
+        this.tokenExpiresAt = data.expires_at
+      } else {
+        // Fallback: 30 минут от текущего времени
+        this.tokenExpiresAt = Date.now() + (30 * 60 * 1000)
+      }
 
       this.log('INFO', 'Access token obtained successfully')
       return this.accessToken
 
     } catch (error) {
-      this.log('ERROR', 'Failed to get access token', { error: error.message })
+      this.log('ERROR', 'Failed to get access token', {
+        error: error instanceof Error ? error.message : String(error)
+      })
       return null
     }
   }
@@ -140,6 +183,18 @@ class SberClient {
     try {
       this.log('INFO', 'Sending chat request', { messageCount: request.messages.length })
 
+      // Для разработки игнорируем SSL ошибки (только в dev режиме)
+      let agent
+      try {
+        const https = require('https')
+        agent = process.env.NODE_ENV === 'development' ?
+          new https.Agent({ rejectUnauthorized: false }) : undefined
+        this.log('INFO', 'SSL agent configured for chat request')
+      } catch (error) {
+        this.log('WARN', 'Could not configure SSL agent for chat', { error: error instanceof Error ? error.message : String(error) })
+        agent = undefined
+      }
+
       const response = await fetch('https://gigachat.devices.sberbank.ru/api/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -147,6 +202,8 @@ class SberClient {
           'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify(request),
+        // @ts-ignore - для разработки
+        agent
       })
 
       if (!response.ok) {
@@ -164,13 +221,13 @@ class SberClient {
       return data
 
     } catch (error) {
-      this.log('ERROR', 'Chat request failed', { error: error.message })
+      this.log('ERROR', 'Chat request failed', { error: error instanceof Error ? error.message : String(error) })
       return null
     }
   }
 
   isAvailable(): boolean {
-    return !!(this.clientId && this.clientSecret)
+    return !!(this.clientId && this.clientSecret) || !!this.authKey
   }
 }
 
