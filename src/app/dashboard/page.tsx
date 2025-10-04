@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MobileMenu } from "@/components/ui/mobile-menu";
+import { AIAssistant } from "@/components/ui/ai-assistant";
 import Link from "next/link";
 
 export default function DashboardPage() {
@@ -386,7 +387,7 @@ export default function DashboardPage() {
 
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Link href="/pricing">
-                  <Button size="lg" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8">
+                  <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white px-8">
                     Посмотреть тарифы
                   </Button>
                 </Link>
@@ -398,12 +399,88 @@ export default function DashboardPage() {
               </div>
 
               <p className="text-gray-400 text-sm mt-4">
-                💡 После триала все данные сохранятся при переходе на платный тариф
+                После триала все данные сохранятся при переходе на платный тариф
               </p>
             </CardContent>
           </Card>
         </div>
+
+        {/* AI Assistant */}
+        <AIAssistant />
       </div>
+
+      {/* Footer */}
+      <footer className="py-12 px-4 bg-black/60 backdrop-blur-xl border-t border-white/20 shadow-2xl">
+        <div className="container mx-auto max-w-6xl">
+          <div className="grid md:grid-cols-5 gap-8">
+            <div>
+              <div className="flex items-center space-x-2 mb-4">
+                <div className="w-8 h-8 bg-blue-500 rounded-lg"></div>
+                <span className="text-xl font-bold text-white">Rundex</span>
+              </div>
+              <p className="text-gray-400 text-sm">
+                Премиум CRM система с интеграцией AI для современного бизнеса.
+              </p>
+            </div>
+
+            <div>
+              <h4 className="text-white font-semibold mb-4">Продукт</h4>
+              <ul className="space-y-2 text-sm text-gray-400">
+                <li><Link href="/pricing" className="hover:text-white">Цены</Link></li>
+                <li><Link href="/premium" className="hover:text-white">Премиум</Link></li>
+                <li><Link href="/about" className="hover:text-white">О нас</Link></li>
+                <li><Link href="/dashboard" className="hover:text-white">Дашборд</Link></li>
+              </ul>
+            </div>
+
+            <div>
+              <h4 className="text-white font-semibold mb-4">Документация API</h4>
+              <ul className="space-y-2 text-sm text-gray-400">
+                <li><a href="/docs/api" className="hover:text-white">REST API</a></li>
+                <li><a href="/docs/webhooks" className="hover:text-white">Webhooks</a></li>
+                <li><a href="/docs/sdk" className="hover:text-white">JavaScript SDK</a></li>
+                <li><a href="/docs/examples" className="hover:text-white">Примеры кода</a></li>
+              </ul>
+            </div>
+
+            <div>
+              <h4 className="text-white font-semibold mb-4">Поддержка</h4>
+              <ul className="space-y-2 text-sm text-gray-400">
+                <li><a href="/docs" className="hover:text-white">Документация</a></li>
+                <li><a href="/status" className="hover:text-white">Статус сервиса</a></li>
+                <li><a href="/help" className="hover:text-white">Центр помощи</a></li>
+                <li><a href="/community" className="hover:text-white">Сообщество</a></li>
+              </ul>
+            </div>
+
+            <div>
+              <h4 className="text-white font-semibold mb-4">Контакты</h4>
+              <ul className="space-y-2 text-sm text-gray-400">
+                <li><a href="mailto:maxonyushko71@gmail.com" className="hover:text-white">maxonyushko71@gmail.com</a></li>
+                <li><a href="https://t.me/MagistrTheOne" className="hover:text-white">Telegram</a></li>
+                <li><a href="https://github.com/MagistrTheOne/" className="hover:text-white">GitHub</a></li>
+                <li>Краснодар, Россия</li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="mt-8 pt-8 border-t border-white/10">
+            <div className="flex flex-col md:flex-row justify-between items-center text-sm text-gray-400">
+              <div className="mb-4 md:mb-0">
+                © 2025 Rundex. Все права защищены.
+                <div className="text-xs text-gray-500 mt-1 italic">
+                  Когда Магистру скучно появляются стартапы - Когда он серьезен, они закрываются
+                </div>
+              </div>
+              <div className="flex space-x-6">
+                <a href="/privacy" className="hover:text-white">Политика конфиденциальности</a>
+                <a href="/terms" className="hover:text-white">Условия использования</a>
+                <a href="/security" className="hover:text-white">Безопасность</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
