@@ -192,6 +192,102 @@ export default function DashboardPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Предложения от Володи */}
+      <Card className="glass-card">
+        <CardHeader>
+          <CardTitle className="text-white flex items-center">
+            <Bot className="w-5 h-5 mr-2 text-[#7B61FF]" />
+            Предложения от Володи
+          </CardTitle>
+          <CardDescription className="text-white/70">
+            AI-рекомендации для улучшения вашей работы
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="p-4 bg-white/5 rounded-lg border border-gray-800">
+              <div className="flex items-start space-x-3">
+                <div className="w-8 h-8 bg-[#7B61FF]/20 rounded-full flex items-center justify-center flex-shrink-0">
+                  <Bot className="w-4 h-4 text-[#7B61FF]" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="text-white font-medium mb-2">Оптимизация конверсии лидов</h4>
+                  <p className="text-white/70 text-sm mb-3">
+                    Ваша конверсия лидов в сделки составляет 34%. Рекомендую внедрить автоматизированные email-рассылки для квалифицированных лидов.
+                  </p>
+                  <Button size="sm" className="bg-[#7B61FF] hover:bg-[#6B51EF] text-white">
+                    Узнать больше
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 bg-white/5 rounded-lg border border-gray-800">
+              <div className="flex items-start space-x-3">
+                <div className="w-8 h-8 bg-[#7B61FF]/20 rounded-full flex items-center justify-center flex-shrink-0">
+                  <Bot className="w-4 h-4 text-[#7B61FF]" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="text-white font-medium mb-2">Распределение нагрузки</h4>
+                  <p className="text-white/70 text-sm mb-3">
+                    Анна показывает наивысшую продуктивность (120% от плана). Рассмотрите передачу части задач коллегам.
+                  </p>
+                  <Button size="sm" variant="outline" className="border-gray-800 text-white hover:bg-white/10">
+                    Посмотреть статистику
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 bg-white/5 rounded-lg border border-gray-800">
+              <div className="flex items-start space-x-3">
+                <div className="w-8 h-8 bg-[#7B61FF]/20 rounded-full flex items-center justify-center flex-shrink-0">
+                  <Bot className="w-4 h-4 text-[#7B61FF]" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="text-white font-medium mb-2">Новые возможности</h4>
+                  <p className="text-white/70 text-sm mb-3">
+                    Обнаружен тренд: B2B-клиенты из IT-сферы конвертируются на 45% лучше. Рекомендую таргетированную работу с этой нишей.
+                  </p>
+                  <Button size="sm" variant="outline" className="border-gray-800 text-white hover:bg-white/10">
+                    Создать кампанию
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 bg-white/5 rounded-lg border border-gray-800">
+              <div className="flex items-start space-x-3">
+                <div className="w-8 h-8 bg-[#7B61FF]/20 rounded-full flex items-center justify-center flex-shrink-0">
+                  <Bot className="w-4 h-4 text-[#7B61FF]" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="text-white font-medium mb-2">Прогноз продаж</h4>
+                  <p className="text-white/70 text-sm mb-3">
+                    На основе текущих трендов, прогноз на следующий квартал: +24% к текущему периоду. Потенциал роста - 3.8 млн ₽.
+                  </p>
+                  <Button size="sm" className="bg-[#7B61FF] hover:bg-[#6B51EF] text-white">
+                    Детальный прогноз
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-4 border-t border-gray-800">
+            <div className="flex items-center justify-between">
+              <p className="text-white/70 text-sm">
+                Эти рекомендации обновляются ежедневно на основе ваших данных
+              </p>
+              <Button variant="ghost" className="text-[#7B61FF] hover:bg-[#7B61FF]/10">
+                <Bot className="w-4 h-4 mr-2" />
+                Спросить Володю
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

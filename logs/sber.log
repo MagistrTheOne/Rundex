@@ -1,0 +1,24 @@
+[2025-10-04T20:14:13.492Z] INFO: Requesting new access token
+[2025-10-04T20:14:13.600Z] ERROR: Failed to get access token
+{
+  "error": "fetch failed"
+}
+[2025-10-04T20:14:13.600Z] WARN: No access token available
+[2025-10-04T20:14:22.684Z] INFO: Requesting new access token
+[2025-10-04T20:14:22.782Z] WARN: No access token available
+[2025-10-04T20:14:22.782Z] ERROR: Failed to get access token
+{
+  "error": "fetch failed"
+}
+[2025-10-04T20:14:32.383Z] INFO: Requesting new access token
+[2025-10-04T20:14:32.456Z] WARN: No access token available
+[2025-10-04T20:14:32.456Z] ERROR: Failed to get access token
+{
+  "error": "fetch failed"
+}
+[2025-10-04T20:14:40.634Z] INFO: Requesting new access token
+[2025-10-04T20:14:40.716Z] ERROR: Failed to get access token
+{
+  "error": "fetch failed"
+}
+[2025-10-04T20:14:40.716Z] WARN: No access token available
