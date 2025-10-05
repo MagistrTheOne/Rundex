@@ -37,6 +37,7 @@ model User {
   campaigns        Campaign[]
   reports          Report[]
   sessions         Session[]
+  chatSessions     ChatSession[]
   sentMessages     Message[]     @relation("MessageSender")
   receivedMessages Message[]     @relation("MessageRecipient")
   events           Event[]
@@ -526,6 +527,35 @@ model Event {
   updatedAt   DateTime       @updatedAt
 
   @@map("events")
+}
+
+// Модель чата с AI-ассистентом
+model ChatSession {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String?  // Автоматически генерируемый заголовок
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  messages    ChatMessage[]
+
+  @@map("chat_sessions")
+}
+
+// Модель сообщений чата
+model ChatMessage {
+  id          String   @id @default(cuid())
+  sessionId   String
+  session     ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  role        String   // 'user' | 'assistant'
+  content     String
+  confidence  Float?
+  source      String?  // 'gigachat' | 'openai' | 'fallback'
+  data        String?  // JSON с дополнительными данными
+  createdAt   DateTime @default(now())
+
+  @@map("chat_messages")
 }
 
 // Модель сессии для NextAuth

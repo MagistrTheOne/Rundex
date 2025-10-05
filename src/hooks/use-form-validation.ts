@@ -146,13 +146,13 @@ export function useFormValidation<T extends Record<string, any>>(
     }))
 
     // Валидация поля при изменении если оно было touched
-    if (formState.touched[field]) {
+    if (formState.touched[field as string]) {
       const error = validateField(field, value)
       setFormState(prev => ({
         ...prev,
         errors: {
           ...prev.errors,
-          [field]: error
+          [field as string]: error
         }
       }))
     }
@@ -164,7 +164,7 @@ export function useFormValidation<T extends Record<string, any>>(
       ...prev,
       touched: {
         ...prev.touched,
-        [field]: touched
+        [field as string]: touched
       }
     }))
 
@@ -175,7 +175,7 @@ export function useFormValidation<T extends Record<string, any>>(
         ...prev,
         errors: {
           ...prev.errors,
-          [field]: error
+          [field as string]: error
         }
       }))
     }
@@ -202,17 +202,17 @@ export function useFormValidation<T extends Record<string, any>>(
 
   // Получение ошибки поля
   const getFieldError = useCallback((field: keyof T): string => {
-    return formState.errors[field] || ''
+    return formState.errors[field as string] || ''
   }, [formState.errors])
 
   // Проверка, было ли поле touched
   const isFieldTouched = useCallback((field: keyof T): boolean => {
-    return formState.touched[field] || false
+    return formState.touched[field as string] || false
   }, [formState.touched])
 
   // Проверка валидности поля
   const isFieldValid = useCallback((field: keyof T): boolean => {
-    return !formState.errors[field]
+    return !formState.errors[field as string]
   }, [formState.errors])
 
   return {

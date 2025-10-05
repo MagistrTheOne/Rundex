@@ -5,9 +5,12 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { SberAdapter, VolodyaMessage } from "@/lib/volodya/sberAdapter"
+import { cacheService, CACHE_KEYS, CACHE_TTL, clearUserCache } from "@/lib/cache/cache-service"
 import OpenAI from "openai"
 
-// Инициализация OpenAI (если ключ предоставлен)
+// Инициализация AI клиентов
+const sberAdapter = new SberAdapter()
 const openai = process.env.OPENAI_API_KEY ? new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 }) : null
@@ -16,7 +19,7 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.id) {
+    if (!session?.user?.email) {
       return NextResponse.json({ error: "Не авторизован" }, { status: 401 })
     }
 
@@ -26,11 +29,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Сообщение обязательно" }, { status: 400 })
     }
 
-    // Получение данных пользователя для контекста
-    const userData = await getUserCRMData(session.user.email)
+    // Получение данных пользователя для контекста (с кешированием)
+    const userData = await cacheService.getOrSet(
+      CACHE_KEYS.user(session.user!.email!),
+      () => getUserCRMData(session.user!.email!),
+      CACHE_TTL.user
+    )
 
-    // Анализ запроса и генерация ответа
-    const response = await generateVolodyaResponse(message, userData, context)
+    // Преобразование контекста в формат для AI
+    const conversationHistory: VolodyaMessage[] = context?.previousMessages?.map((msg: any) => ({
+      role: msg.role === 'user' ? 'user' : 'assistant',
+      content: msg.content,
+      timestamp: Date.now()
+    })) || []
+
+    // Генерация ответа через AI
+    const aiResponse = await generateAIResponse(message, userData, conversationHistory)
+
+    // Анализ запроса для дополнительных данных
+    const queryAnalysis = await analyzeQueryIntent(message, userData)
 
     // Сохранение активности
     await prisma.activity.create({
@@ -42,10 +59,63 @@ export async function POST(request: NextRequest) {
       }
     })
 
+    // Создание/обновление сессии чата
+    let chatSession = await (prisma as any).chatSession.findFirst({
+      where: {
+        userId: session.user.email,
+        updatedAt: {
+          gte: new Date(Date.now() - 30 * 60 * 1000) // Активная сессия в последние 30 минут
+        }
+      },
+      orderBy: { updatedAt: 'desc' }
+    })
+
+    if (!chatSession) {
+      // Создаем новую сессию чата
+      chatSession = await (prisma as any).chatSession.create({
+        data: {
+          userId: session.user.email,
+          title: `Чат с Володей - ${new Date().toLocaleDateString('ru-RU')}`
+        }
+      })
+    }
+
+    // Сохранение сообщений пользователя и ассистента
+    await (prisma as any).chatMessage.create({
+      data: {
+        sessionId: chatSession.id,
+        role: 'user',
+        content: message
+      }
+    })
+
+    await (prisma as any).chatMessage.create({
+      data: {
+        sessionId: chatSession.id,
+        role: 'assistant',
+        content: aiResponse.response,
+        confidence: aiResponse.confidence,
+        source: aiResponse.source,
+        data: queryAnalysis.data ? JSON.stringify(queryAnalysis.data) : null
+      }
+    })
+
+    // Обновление времени сессии
+    await (prisma as any).chatSession.update({
+      where: { id: chatSession.id },
+      data: { updatedAt: new Date() }
+    })
+
+    // Очистка кеша истории чатов пользователя
+    await cacheService.clearByPrefix(`chat_history:${session.user.email}`)
+    await cacheService.clearByPrefix(`chat_count:${session.user.email}`)
+
     return NextResponse.json({
-      response: response.content,
-      suggestions: response.suggestions,
-      data: response.data
+      response: aiResponse.response,
+      suggestions: queryAnalysis.suggestions,
+      data: queryAnalysis.data,
+      confidence: aiResponse.confidence,
+      source: aiResponse.source
     })
 
   } catch (error) {
@@ -364,12 +434,207 @@ function generateFallbackResponse(message: string, userData: any): string {
   return `Я понимаю ваш запрос "${message}", но мне нужно больше контекста для точного ответа.
 
 У вас в системе:
-• ${userData.stats.totalLeads} лидов
-• ${userData.stats.totalContacts} контактов
-• ${userData.stats.activeOpportunities} активных сделок
+• ${userData.stats?.totalLeads || 0} лидов
+• ${userData.stats?.totalContacts || 0} контактов
+• ${userData.stats?.activeOpportunities || 0} активных сделок
 
 Попробуйте спросить конкретнее:
 • "Показать статистику лидов"
 • "Какие задачи просрочены"
 • "Анализ продаж за месяц"`
+}
+
+function getSuggestionsForType(queryType: string): string[] {
+  switch (queryType) {
+    case "leads_analysis":
+      return ["Показать высоко-приоритетные лиды", "Создать задачу для контакта с лидами", "Анализ источников лидов"]
+    case "sales_performance":
+      return ["Детальный отчёт по продажам", "Анализ конверсии по этапам", "Прогноз на следующий месяц"]
+    case "tasks_management":
+      return ["Показать просроченные задачи", "Распределить задачи по приоритетам", "Отчёт по продуктивности"]
+    case "contacts_search":
+      return ["Создать сегмент контактов", "Экспорт контактов", "Анализ по регионам"]
+    case "statistics_overview":
+      return ["Подробная статистика", "Сравнение с прошлым периодом", "Рекомендации по улучшению"]
+    default:
+      return ["Показать статистику лидов", "Анализ продаж", "Управление задачами"]
+  }
+}
+
+// Генерация ответа через AI (Sber или OpenAI)
+async function generateAIResponse(
+  message: string,
+  userData: any,
+  conversationHistory: VolodyaMessage[]
+): Promise<{ response: string; confidence: number; source: 'gigachat' | 'openai' | 'fallback' }> {
+  try {
+    // Пытаемся использовать Sber GigaChat
+    const sberResponse = await SberAdapter.generateResponse(message, userData, conversationHistory)
+    if (sberResponse.confidence > 0.7) {
+      return {
+        response: sberResponse.response,
+        confidence: sberResponse.confidence,
+        source: 'gigachat'
+      }
+    }
+  } catch (error) {
+    console.error('Sber AI error:', error)
+  }
+
+  // Fallback на OpenAI
+  if (openai) {
+    try {
+      const systemPrompt = `Ты Володя, дружелюбный и профессиональный AI-ассистент в российской CRM-системе Rundex.
+      Ты всегда отвечаешь на русском языке. Ты помогаешь анализировать данные о лидах, контактах, продажах и задачах.
+      Будь полезным, конкретным и давай практические рекомендации.
+
+      Контекст данных пользователя:
+      - Лиды: ${userData.stats.totalLeads} (новых: ${userData.stats.newLeads})
+      - Контакты: ${userData.stats.totalContacts}
+      - Сделки: ${userData.stats.activeOpportunities} активных, доход: ${userData.stats.totalRevenue}₽
+      - Задачи: ${userData.stats.pendingTasks} в работе`
+
+      const messages = [
+        { role: "system" as const, content: systemPrompt },
+        ...conversationHistory.slice(-3).map(msg => ({
+          role: msg.role as "user" | "assistant",
+          content: msg.content
+        })),
+        { role: "user" as const, content: message }
+      ]
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-3.5-turbo",
+        messages,
+        max_tokens: 500,
+        temperature: 0.7
+      })
+
+      const response = completion.choices[0]?.message?.content || "Извините, не удалось сгенерировать ответ."
+
+      return {
+        response,
+        confidence: 0.8,
+        source: 'openai'
+      }
+    } catch (error) {
+      console.error('OpenAI error:', error)
+    }
+  }
+
+  // Последний fallback - синхронный анализ
+  const analysisResult = analyzeQueryType(message)
+  const response = {
+    content: generateFallbackResponse(message, userData),
+    suggestions: getSuggestionsForType(analysisResult),
+    data: null
+  }
+  return {
+    response: response.content,
+    confidence: 0.5,
+    source: 'fallback'
+  }
+}
+
+// Анализ намерения запроса для дополнительных данных и предложений
+async function analyzeQueryIntent(message: string, userData: any): Promise<{
+  suggestions: string[];
+  data: any;
+  intent: string;
+}> {
+  const lowerMessage = message.toLowerCase()
+  let intent = 'general'
+  let suggestions: string[] = []
+  let data: any = null
+
+  // Анализ лидов
+  if (lowerMessage.includes('лид') || lowerMessage.includes('lead') || lowerMessage.includes('потенциал')) {
+    intent = 'leads'
+    suggestions = [
+      'Показать квалифицированные лиды',
+      'Создать задачу для контакта с лидом',
+      'Анализ источников лидов',
+      'Экспорт лидов в CSV'
+    ]
+    data = {
+      leads: userData.leads.slice(0, 5),
+      stats: {
+        total: userData.stats.totalLeads,
+        new: userData.stats.newLeads,
+        qualified: userData.stats.qualifiedLeads
+      }
+    }
+  }
+
+  // Анализ продаж
+  else if (lowerMessage.includes('продаж') || lowerMessage.includes('воронк') || lowerMessage.includes('сделк') || lowerMessage.includes('доход')) {
+    intent = 'sales'
+    suggestions = [
+      'Детальный отчёт по продажам',
+      'Анализ конверсии по этапам',
+      'Показать крупные сделки',
+      'Прогноз дохода на месяц'
+    ]
+    data = {
+      opportunities: userData.opportunities.slice(0, 5),
+      stats: {
+        active: userData.stats.activeOpportunities,
+        revenue: userData.stats.totalRevenue,
+        avgDealSize: userData.opportunities.filter((o: any) => o.stage === 'CLOSED_WON').length > 0
+          ? userData.opportunities.filter((o: any) => o.stage === 'CLOSED_WON').reduce((sum: number, o: any) => sum + o.amount, 0) /
+            userData.opportunities.filter((o: any) => o.stage === 'CLOSED_WON').length
+          : 0
+      }
+    }
+  }
+
+  // Анализ задач
+  else if (lowerMessage.includes('задач') || lowerMessage.includes('task') || lowerMessage.includes('работ')) {
+    intent = 'tasks'
+    suggestions = [
+      'Показать просроченные задачи',
+      'Распределить задачи по приоритетам',
+      'Создать новую задачу',
+      'Отчёт по продуктивности'
+    ]
+    data = {
+      tasks: userData.tasks.slice(0, 5),
+      stats: {
+        pending: userData.stats.pendingTasks,
+        completed: userData.stats.completedTasks,
+        urgent: userData.tasks.filter((t: any) => t.priority === 'HIGH' || t.priority === 'URGENT').length
+      }
+    }
+  }
+
+  // Анализ контактов
+  else if (lowerMessage.includes('контакт') || lowerMessage.includes('contact') || lowerMessage.includes('клиент')) {
+    intent = 'contacts'
+    suggestions = [
+      'Найти контакты из Москвы',
+      'Создать сегмент контактов',
+      'Экспорт контактов',
+      'Связать контакты с лидами'
+    ]
+    data = {
+      contacts: userData.contacts.slice(0, 5),
+      stats: {
+        total: userData.stats.totalContacts
+      }
+    }
+  }
+
+  // Общая статистика
+  else {
+    intent = 'stats'
+    suggestions = [
+      'Показать все KPI',
+      'Сравнить с прошлым месяцем',
+      'Экспорт отчёта',
+      'Рекомендации по улучшению'
+    ]
+    data = userData.stats
+  }
+
+  return { suggestions, data, intent }
 }

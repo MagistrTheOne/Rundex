@@ -49,6 +49,67 @@ export class SberAdapter {
   }
 
   /**
+   * Генерирует ответ с учетом контекста пользователя
+   */
+  static async generateResponse(
+    message: string,
+    userData: any,
+    context: VolodyaMessage[] = []
+  ): Promise<VolodyaResponse> {
+    try {
+      // Сначала пытаемся использовать GigaChat
+      return await this.queryGigaChat(message, context)
+    } catch (error) {
+      console.error('GigaChat error, falling back to analysis:', error)
+
+      // Fallback: генерируем ответ на основе анализа данных
+      const fallbackResponse = this.generateFallbackAnalysis(message, userData)
+      return {
+        response: fallbackResponse,
+        tokens: 0,
+        source: 'fallback',
+        confidence: 0.5
+      }
+    }
+  }
+
+  /**
+   * Генерирует fallback ответ на основе анализа данных
+   */
+  private static generateFallbackAnalysis(message: string, userData: any): string {
+    const lowerMessage = message.toLowerCase()
+
+    // Анализ лидов
+    if (lowerMessage.includes('лид') || lowerMessage.includes('lead')) {
+      const stats = userData.stats || {}
+      return `Анализ ваших лидов:
+• Всего лидов: ${stats.totalLeads || 0}
+• Новых: ${stats.newLeads || 0}
+• Квалифицированных: ${stats.qualifiedLeads || 0}
+
+Рекомендую связаться с новыми лидами в ближайшие 24 часа.`
+    }
+
+    // Анализ продаж
+    if (lowerMessage.includes('продаж') || lowerMessage.includes('сделк')) {
+      const stats = userData.stats || {}
+      return `Анализ продаж:
+• Активных сделок: ${stats.activeOpportunities || 0}
+• Общий доход: ${stats.totalRevenue?.toLocaleString('ru-RU') || 0} ₽
+
+Фокусируйтесь на сделках с высокой вероятностью закрытия.`
+    }
+
+    // Общий ответ
+    return `Я понимаю ваш запрос. У вас в системе:
+• ${userData.stats?.totalLeads || 0} лидов
+• ${userData.stats?.totalContacts || 0} контактов
+• ${userData.stats?.activeOpportunities || 0} активных сделок
+
+Попробуйте спросить конкретнее о лидах, продажах или задачах.`
+  }
+
+  /**
    * Отправляет запрос в GigaChat
    */
   static async queryGigaChat(
@@ -68,7 +129,7 @@ export class SberAdapter {
         content: this.createSystemPrompt()
       },
       ...recentContext.map(msg => ({
-        role: msg.role === 'user' ? 'user' : 'assistant',
+        role: (msg.role === 'user' ? 'user' : 'assistant') as 'user' | 'assistant',
         content: msg.content
       })),
       {
