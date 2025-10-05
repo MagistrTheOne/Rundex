@@ -403,19 +403,35 @@ export default function DashboardPage() {
         </CardHeader>
         <CardContent className="p-4 md:p-6">
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
-            <Button variant="outline" className="h-16 md:h-20 flex-col border-white/20 hover:bg-white/10 transition-all duration-200">
+            <Button
+              variant="outline"
+              className="h-16 md:h-20 flex-col border-white/20 hover:bg-white/10 transition-all duration-200"
+              onClick={() => window.open('/dashboard/leads/new', '_blank')}
+            >
               <UserPlus className="w-5 h-5 md:w-6 md:h-6 mb-1 md:mb-2" />
               <span className="text-xs md:text-sm text-center leading-tight">Новый лид</span>
             </Button>
-            <Button variant="outline" className="h-16 md:h-20 flex-col border-white/20 hover:bg-white/10 transition-all duration-200">
+            <Button
+              variant="outline"
+              className="h-16 md:h-20 flex-col border-white/20 hover:bg-white/10 transition-all duration-200"
+              onClick={() => window.open('/dashboard/contacts/new', '_blank')}
+            >
               <Users className="w-5 h-5 md:w-6 md:h-6 mb-1 md:mb-2" />
               <span className="text-xs md:text-sm text-center leading-tight">Добавить контакт</span>
             </Button>
-            <Button variant="outline" className="h-16 md:h-20 flex-col border-white/20 hover:bg-white/10 transition-all duration-200">
+            <Button
+              variant="outline"
+              className="h-16 md:h-20 flex-col border-white/20 hover:bg-white/10 transition-all duration-200"
+              onClick={() => window.open('/dashboard/opportunities/new', '_blank')}
+            >
               <Target className="w-5 h-5 md:w-6 md:h-6 mb-1 md:mb-2" />
               <span className="text-xs md:text-sm text-center leading-tight">Создать сделку</span>
             </Button>
-            <Button variant="outline" className="h-16 md:h-20 flex-col border-white/20 hover:bg-white/10 transition-all duration-200">
+            <Button
+              variant="outline"
+              className="h-16 md:h-20 flex-col border-white/20 hover:bg-white/10 transition-all duration-200"
+              onClick={() => window.open('/dashboard/tasks/new', '_blank')}
+            >
               <CheckSquare className="w-5 h-5 md:w-6 md:h-6 mb-1 md:mb-2" />
               <span className="text-xs md:text-sm text-center leading-tight">Новая задача</span>
             </Button>

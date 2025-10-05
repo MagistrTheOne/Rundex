@@ -37,16 +37,74 @@ class CrmMonitor {
   private changes: CrmChange[] = []
   private readonly MONITORING_INTERVAL = 60 * 60 * 1000 // 1 час
   private readonly MAX_CHANGES = 1000
+  private readonly RATE_LIMIT_WINDOW = 60 * 1000 // 1 минута
+  private readonly RATE_LIMIT_MAX_CHANGES = 100 // Максимум изменений в минуту
+  private changeCounts: Map<number, number> = new Map()
+  private monitoringTimer: NodeJS.Timeout | null = null
 
   constructor() {
     // Запускаем периодический мониторинг
-    setInterval(() => this.generateReport(), this.MONITORING_INTERVAL)
+    this.monitoringTimer = setInterval(() => this.generateReport(), this.MONITORING_INTERVAL)
+
+    // Очистка rate limit счетчиков каждую минуту
+    setInterval(() => this.cleanupRateLimits(), this.RATE_LIMIT_WINDOW)
+
+    // Graceful shutdown
+    if (typeof process !== 'undefined') {
+      process.on('SIGINT', () => this.shutdown())
+      process.on('SIGTERM', () => this.shutdown())
+    }
+  }
+
+  /**
+   * Корректное завершение работы
+   */
+  private shutdown(): void {
+    if (this.monitoringTimer) {
+      clearInterval(this.monitoringTimer)
+      this.monitoringTimer = null
+    }
+  }
+
+  /**
+   * Проверяет rate limit для регистрации изменений
+   */
+  private checkRateLimit(): boolean {
+    const now = Math.floor(Date.now() / this.RATE_LIMIT_WINDOW)
+    const currentCount = this.changeCounts.get(now) || 0
+
+    if (currentCount >= this.RATE_LIMIT_MAX_CHANGES) {
+      console.warn('[CrmMonitor] Rate limit exceeded, skipping change logging')
+      return false
+    }
+
+    this.changeCounts.set(now, currentCount + 1)
+    return true
+  }
+
+  /**
+   * Очищает устаревшие rate limit счетчики
+   */
+  private cleanupRateLimits(): void {
+    const now = Math.floor(Date.now() / this.RATE_LIMIT_WINDOW)
+    const cutoff = now - 5 // Удаляем счетчики старше 5 минут
+
+    for (const [timestamp] of this.changeCounts.entries()) {
+      if (timestamp < cutoff) {
+        this.changeCounts.delete(timestamp)
+      }
+    }
   }
 
   /**
    * Регистрация изменения в CRM
    */
   logChange(change: Omit<CrmChange, 'id' | 'timestamp'>): void {
+    // Проверяем rate limit
+    if (!this.checkRateLimit()) {
+      return
+    }
+
     const newChange: CrmChange = {
       ...change,
       id: crypto.randomUUID(),

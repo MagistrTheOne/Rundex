@@ -17,12 +17,42 @@ export class ContextManager {
   private static readonly MAX_MESSAGES = 5
   private static readonly SESSION_TIMEOUT = 30 * 60 * 1000 // 30 минут
   private static readonly CLEANUP_INTERVAL = 5 * 60 * 1000 // 5 минут
+  private static readonly MAX_SESSIONS = 1000 // Максимум сессий в памяти
 
   private static sessions: Map<string, ContextSession> = new Map()
+  private static cleanupTimer: NodeJS.Timeout | null = null
 
-  static {
+  /**
+   * Инициализация менеджера контекста
+   */
+  static initialize(): void {
+    if (this.cleanupTimer) return // Уже инициализирован
+
     // Инициализируем очистку устаревших сессий
-    setInterval(() => this.cleanup(), this.CLEANUP_INTERVAL)
+    this.cleanupTimer = setInterval(() => this.cleanup(), this.CLEANUP_INTERVAL)
+
+    // Graceful shutdown
+    if (typeof process !== 'undefined') {
+      process.on('SIGINT', () => this.shutdown())
+      process.on('SIGTERM', () => this.shutdown())
+    }
+  }
+
+  /**
+   * Корректное завершение работы
+   */
+  private static shutdown(): void {
+    if (this.cleanupTimer) {
+      clearInterval(this.cleanupTimer)
+      this.cleanupTimer = null
+    }
+
+    // Сохраняем все активные сессии
+    for (const [sessionId, session] of this.sessions.entries()) {
+      this.saveToFile(sessionId)
+    }
+
+    console.log('[ContextManager] Shutdown completed')
   }
 
   /**
@@ -32,17 +62,51 @@ export class ContextManager {
     let session = this.sessions.get(sessionId)
 
     if (!session || Date.now() > session.expiresAt) {
-      session = {
-        sessionId,
-        messages: [],
-        lastActivity: Date.now(),
-        expiresAt: Date.now() + this.SESSION_TIMEOUT
+      // Проверяем лимит сессий
+      if (this.sessions.size >= this.MAX_SESSIONS) {
+        this.evictOldestSession()
       }
-      this.sessions.set(sessionId, session)
+
+      // Пытаемся загрузить из файла
+      this.loadFromFile(sessionId)
+
+      session = this.sessions.get(sessionId)
+
+      if (!session) {
+        session = {
+          sessionId,
+          messages: [],
+          lastActivity: Date.now(),
+          expiresAt: Date.now() + this.SESSION_TIMEOUT
+        }
+        this.sessions.set(sessionId, session)
+      }
     }
 
     session.lastActivity = Date.now()
     return session
+  }
+
+  /**
+   * Удаляет самую старую сессию при превышении лимита
+   */
+  private static evictOldestSession(): void {
+    let oldestSessionId: string | null = null
+    let oldestTime = Date.now()
+
+    for (const [sessionId, session] of this.sessions.entries()) {
+      if (session.lastActivity < oldestTime) {
+        oldestTime = session.lastActivity
+        oldestSessionId = sessionId
+      }
+    }
+
+    if (oldestSessionId) {
+      // Сохраняем перед удалением
+      this.saveToFile(oldestSessionId)
+      this.sessions.delete(oldestSessionId)
+      console.log(`[ContextManager] Evicted old session: ${oldestSessionId}`)
+    }
   }
 
   /**
@@ -100,19 +164,26 @@ export class ContextManager {
   static saveToFile(sessionId: string): void {
     try {
       const session = this.sessions.get(sessionId)
-      if (!session) return
+      if (!session || session.messages.length === 0) return
+
+      // Создаем директорию если не существует
+      if (!existsSync(this.CONTEXT_DIR)) {
+        require('fs').mkdirSync(this.CONTEXT_DIR, { recursive: true })
+      }
 
       const filePath = join(this.CONTEXT_DIR, `${sessionId}.json`)
 
-      // Создаем директорию если не существует
-      const fs = require('fs')
-      if (!existsSync(this.CONTEXT_DIR)) {
-        fs.mkdirSync(this.CONTEXT_DIR, { recursive: true })
+      // Сериализуем только необходимые данные
+      const serializedSession = {
+        sessionId: session.sessionId,
+        messages: session.messages,
+        lastActivity: session.lastActivity,
+        expiresAt: session.expiresAt
       }
 
-      writeFileSync(filePath, JSON.stringify(session, null, 2), 'utf-8')
+      writeFileSync(filePath, JSON.stringify(serializedSession, null, 2), 'utf-8')
     } catch (error) {
-      console.error('Failed to save context to file:', error)
+      console.error('[ContextManager] Failed to save context to file:', error)
     }
   }
 
@@ -126,17 +197,49 @@ export class ContextManager {
       if (!existsSync(filePath)) return
 
       const data = readFileSync(filePath, 'utf-8')
-      const session: ContextSession = JSON.parse(data)
+      const parsedData = JSON.parse(data)
+
+      // Валидируем структуру данных
+      if (!parsedData.sessionId || !Array.isArray(parsedData.messages)) {
+        console.warn(`[ContextManager] Invalid session data for ${sessionId}`)
+        return
+      }
+
+      const session: ContextSession = {
+        sessionId: parsedData.sessionId,
+        messages: parsedData.messages,
+        lastActivity: parsedData.lastActivity || Date.now(),
+        expiresAt: parsedData.expiresAt || (Date.now() + this.SESSION_TIMEOUT)
+      }
 
       // Проверяем актуальность
       if (Date.now() < session.expiresAt) {
-        this.sessions.set(sessionId, session)
+        // Проверяем лимит перед загрузкой
+        if (this.sessions.size < this.MAX_SESSIONS) {
+          this.sessions.set(sessionId, session)
+        } else {
+          console.warn(`[ContextManager] Cannot load session ${sessionId}: memory limit reached`)
+        }
       } else {
         // Удаляем устаревший файл
-        require('fs').unlinkSync(filePath)
+        try {
+          require('fs').unlinkSync(filePath)
+        } catch (unlinkError) {
+          console.error('[ContextManager] Failed to delete expired session file:', unlinkError)
+        }
       }
     } catch (error) {
-      console.error('Failed to load context from file:', error)
+      console.error(`[ContextManager] Failed to load context from file for ${sessionId}:`, error)
+
+      // Удаляем поврежденный файл
+      try {
+        const filePath = join(this.CONTEXT_DIR, `${sessionId}.json`)
+        if (existsSync(filePath)) {
+          require('fs').unlinkSync(filePath)
+        }
+      } catch (cleanupError) {
+        console.error('[ContextManager] Failed to cleanup corrupted session file:', cleanupError)
+      }
     }
   }
 
@@ -145,8 +248,8 @@ export class ContextManager {
    */
   static clearContext(sessionId: string): void {
     if (this.sessions.has(sessionId)) {
+      this.saveToFile(sessionId) // Сохраняем перед удалением
       this.sessions.delete(sessionId)
-      this.saveSessions()
     }
   }
 

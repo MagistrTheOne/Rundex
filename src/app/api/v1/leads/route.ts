@@ -1,11 +1,11 @@
-// Rundex CRM - API для управления лидами
+// Rundex CRM - API для управления лидами (v1)
 // Автор: MagistrTheOne, 2025
 
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
-import { prisma } from "@/lib/prisma"
 import { createLeadSchema, leadsFilterSchema } from "@/lib/validations/schemas"
+import { leadsService } from "@/lib/services/leads-service"
 
 // GET /api/leads - Получить все лиды пользователя
 export async function GET(request: NextRequest) {
@@ -34,40 +34,8 @@ export async function GET(request: NextRequest) {
 
     const filters = filterResult.data
 
-    const where: any = {
-      assignedToId: session.user.email
-    }
-
-    if (filters.status && filters.status !== "ALL") {
-      where.status = filters.status
-    }
-
-    if (filters.priority && filters.priority !== "ALL") {
-      where.priority = filters.priority
-    }
-
-    if (filters.search) {
-      where.OR = [
-        { firstName: { contains: filters.search, mode: "insensitive" } },
-        { lastName: { contains: filters.search, mode: "insensitive" } },
-        { email: { contains: filters.search, mode: "insensitive" } },
-        { company: { contains: filters.search, mode: "insensitive" } }
-      ]
-    }
-
-    const leads = await prisma.lead.findMany({
-      where,
-      include: {
-        assignedTo: {
-          select: { name: true, email: true }
-        },
-        activities: {
-          orderBy: { createdAt: "desc" },
-          take: 3
-        }
-      },
-      orderBy: { updatedAt: "desc" }
-    })
+    // Используем сервис для получения лидов
+    const leads = await leadsService.getLeads(session.user.email, filters)
 
     return NextResponse.json(leads)
   } catch (error) {
@@ -101,43 +69,8 @@ export async function POST(request: NextRequest) {
 
     const validatedData = validationResult.data
 
-    // Создание лида
-    const lead = await prisma.lead.create({
-      data: {
-        firstName: validatedData.firstName,
-        lastName: validatedData.lastName,
-        email: validatedData.email,
-        phone: validatedData.phone,
-        company: validatedData.company,
-        position: validatedData.position,
-        website: validatedData.website,
-        address: validatedData.address,
-        city: validatedData.city,
-        region: validatedData.region,
-        source: validatedData.source,
-        status: validatedData.status,
-        priority: validatedData.priority,
-        budget: validatedData.budget,
-        notes: validatedData.notes,
-        assignedToId: session.user.email,
-        score: validatedData.score || Math.floor(Math.random() * 40) + 60 // Простой алгоритм скоринга
-      },
-      include: {
-        assignedTo: {
-          select: { name: true, email: true }
-        }
-      }
-    })
-
-    // Создание активности
-    await prisma.activity.create({
-      data: {
-        type: "LEAD_CREATED",
-        subject: `Создан лид: ${lead.firstName} ${lead.lastName}`,
-        userId: session.user.email,
-        leadId: lead.id
-      }
-    })
+    // Используем сервис для создания лида
+    const lead = await leadsService.createLead(validatedData, session.user.email)
 
     return NextResponse.json(lead, { status: 201 })
   } catch (error) {

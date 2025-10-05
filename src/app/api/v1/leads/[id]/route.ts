@@ -16,7 +16,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.email) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "Не авторизован" }, { status: 401 })
     }
 
@@ -72,7 +72,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.email) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "Не авторизован" }, { status: 401 })
     }
 
@@ -141,7 +141,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         type: "STATUS_CHANGED",
         subject: `Обновлён лид: ${lead.firstName} ${lead.lastName}`,
         description: `Статус изменён на: ${lead.status}`,
-        userId: session.user.email!,
+        userId: session.user.email,
         leadId: lead.id
       }
     })
@@ -161,7 +161,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.email) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "Не авторизован" }, { status: 401 })
     }
 

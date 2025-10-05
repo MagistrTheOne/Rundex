@@ -70,7 +70,7 @@ export default function OpportunitiesPage() {
         if (stageFilter !== "ALL") params.append("stage", stageFilter)
         if (searchQuery) params.append("search", searchQuery)
 
-        const response = await fetch(`/api/opportunities?${params}`)
+        const response = await fetch(`/api/v1/opportunities?${params}`)
         if (!response.ok) throw new Error("Ошибка загрузки возможностей")
 
         const data = await response.json()
@@ -87,7 +87,7 @@ export default function OpportunitiesPage() {
 
   const handleCreateOpportunity = async (opportunityData: any) => {
     try {
-      const response = await fetch('/api/opportunities', {
+      const response = await fetch('/api/v1/opportunities', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -107,7 +107,7 @@ export default function OpportunitiesPage() {
 
   const handleEditOpportunity = async (opportunityData: any) => {
     try {
-      const response = await fetch(`/api/opportunities/${editingOpportunity?.id}`, {
+      const response = await fetch(`/api/v1/opportunities/${editingOpportunity?.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -129,7 +129,7 @@ export default function OpportunitiesPage() {
 
   const handleDeleteOpportunity = async (opportunityId: string) => {
     try {
-      const response = await fetch(`/api/opportunities/${opportunityId}`, {
+      const response = await fetch(`/api/v1/opportunities/${opportunityId}`, {
         method: 'DELETE',
       })
 

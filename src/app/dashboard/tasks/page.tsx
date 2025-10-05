@@ -69,7 +69,7 @@ export default function TasksPage() {
         if (priorityFilter !== "ALL") params.append("priority", priorityFilter)
         if (searchQuery) params.append("search", searchQuery)
 
-        const response = await fetch(`/api/tasks?${params}`)
+        const response = await fetch(`/api/v1/tasks?${params}`)
         if (!response.ok) throw new Error("Ошибка загрузки задач")
 
         const data = await response.json()
@@ -86,7 +86,7 @@ export default function TasksPage() {
 
   const handleCreateTask = async (taskData: any) => {
     try {
-      const response = await fetch('/api/tasks', {
+      const response = await fetch('/api/v1/tasks', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -106,7 +106,7 @@ export default function TasksPage() {
 
   const handleEditTask = async (taskData: any) => {
     try {
-      const response = await fetch(`/api/tasks/${editingTask?.id}`, {
+      const response = await fetch(`/api/v1/tasks/${editingTask?.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -128,7 +128,7 @@ export default function TasksPage() {
 
   const handleDeleteTask = async (taskId: string) => {
     try {
-      const response = await fetch(`/api/tasks/${taskId}`, {
+      const response = await fetch(`/api/v1/tasks/${taskId}`, {
         method: 'DELETE',
       })
 
@@ -142,7 +142,7 @@ export default function TasksPage() {
 
   const handleStatusChange = async (taskId: string, newStatus: string) => {
     try {
-      const response = await fetch(`/api/tasks/${taskId}`, {
+      const response = await fetch(`/api/v1/tasks/${taskId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

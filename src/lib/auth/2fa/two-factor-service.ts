@@ -3,6 +3,7 @@
 
 import speakeasy from 'speakeasy'
 import qrcode from 'qrcode'
+import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
 
 export interface TwoFactorSetup {
@@ -255,20 +256,15 @@ export class TwoFactorAuthService {
     return code
   }
 
-  // Хеширование резервного кода (простое хеширование для демо)
+  // Хеширование резервного кода с bcrypt
   private async hashBackupCode(code: string): Promise<string> {
-    // В продакшене используйте bcrypt или argon2
-    const encoder = new TextEncoder()
-    const data = encoder.encode(code + process.env.NEXTAUTH_SECRET)
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data)
-    const hashArray = Array.from(new Uint8Array(hashBuffer))
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+    const saltRounds = 12 // Высокий уровень защиты для коротких кодов
+    return await bcrypt.hash(code, saltRounds)
   }
 
   // Проверка хешированного резервного кода
   private async verifyHashedBackupCode(code: string, hashedCode: string): Promise<boolean> {
-    const expectedHash = await this.hashBackupCode(code)
-    return expectedHash === hashedCode
+    return await bcrypt.compare(code, hashedCode)
   }
 }
 

@@ -47,7 +47,7 @@ export default function ContactsPage() {
         const params = new URLSearchParams()
         if (searchQuery) params.append("search", searchQuery)
 
-        const response = await fetch(`/api/contacts?${params}`)
+        const response = await fetch(`/api/v1/contacts?${params}`)
         if (!response.ok) throw new Error("Ошибка загрузки контактов")
 
         const data = await response.json()
@@ -64,7 +64,7 @@ export default function ContactsPage() {
 
   const handleCreateContact = async (contactData: any) => {
     try {
-      const response = await fetch('/api/contacts', {
+      const response = await fetch('/api/v1/contacts', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -84,7 +84,7 @@ export default function ContactsPage() {
 
   const handleEditContact = async (contactData: any) => {
     try {
-      const response = await fetch(`/api/contacts/${editingContact?.id}`, {
+      const response = await fetch(`/api/v1/contacts/${editingContact?.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -106,7 +106,7 @@ export default function ContactsPage() {
 
   const handleDeleteContact = async (contactId: string) => {
     try {
-      const response = await fetch(`/api/contacts/${contactId}`, {
+      const response = await fetch(`/api/v1/contacts/${contactId}`, {
         method: 'DELETE',
       })
 

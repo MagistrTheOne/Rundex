@@ -72,47 +72,47 @@ export interface TaskItem {
 export const stats: StatCard[] = [
   {
     title: "Активные лиды",
-    value: "24",
-    description: "+12% от прошлого месяца",
+    value: "247",
+    description: "+23% от прошлого месяца",
     icon: UserPlus,
     color: "text-blue-400",
-    bgGradient: "bg-black/80",
-    borderColor: "border-blue-500/20",
+    bgGradient: "from-blue-500/10 to-cyan-500/10",
+    borderColor: "border-blue-500/30",
+    trend: "up",
+    change: 23
+  },
+  {
+    title: "Контакты",
+    value: "1,247",
+    description: "+156 новых за неделю",
+    icon: Users,
+    color: "text-emerald-400",
+    bgGradient: "from-emerald-500/10 to-green-500/10",
+    borderColor: "border-emerald-500/30",
+    trend: "up",
+    change: 156
+  },
+  {
+    title: "Сделки в работе",
+    value: "89",
+    description: "На сумму 12.4M ₽",
+    icon: Target,
+    color: "text-amber-400",
+    bgGradient: "from-amber-500/10 to-orange-500/10",
+    borderColor: "border-amber-500/30",
     trend: "up",
     change: 12
   },
   {
-    title: "Контакты",
-    value: "156",
-    description: "+8 новых за неделю",
-    icon: Users,
-    color: "text-green-400",
-    bgGradient: "bg-black/80",
-    borderColor: "border-green-500/20",
-    trend: "up",
-    change: 8
-  },
-  {
-    title: "Сделки в работе",
-    value: "12",
-    description: "На сумму 2.4M ₽",
-    icon: Target,
-    color: "text-amber-400",
-    bgGradient: "bg-black/80",
-    borderColor: "border-amber-500/20",
-    trend: "neutral",
-    change: 0
-  },
-  {
-    title: "Завершённые задачи",
-    value: "89%",
-    description: "Эффективность команды",
-    icon: CheckSquare,
+    title: "Конверсия",
+    value: "34.2%",
+    description: "+5.1% от прошлого месяца",
+    icon: TrendingUp,
     color: "text-purple-400",
-    bgGradient: "bg-black/80",
-    borderColor: "border-purple-500/20",
+    bgGradient: "from-purple-500/10 to-pink-500/10",
+    borderColor: "border-purple-500/30",
     trend: "up",
-    change: 5
+    change: 5.1
   }
 ]
 
@@ -192,16 +192,22 @@ export const dailyChallenges: DailyChallenge[] = [
 ]
 
 export const recentActivities: ActivityItem[] = [
-  { id: 1, action: "Создан новый лид", subject: "Иванов Иван", time: "2 мин назад", type: "lead" },
-  { id: 2, action: "Завершена задача", subject: "Подготовить презентацию", time: "15 мин назад", type: "task" },
-  { id: 3, action: "Обновлён контакт", subject: "ООО 'ТехноСервис'", time: "1 час назад", type: "contact" },
-  { id: 4, action: "Закрыта сделка", subject: "Контракт на 500K ₽", time: "2 часа назад", type: "deal" },
+  { id: 1, action: "Создан новый лид", subject: "Александр Петров (В2В сегмент)", time: "2 мин назад", type: "lead" },
+  { id: 2, action: "Завершена задача", subject: "Подготовить коммерческое предложение", time: "15 мин назад", type: "task" },
+  { id: 3, action: "Обновлён контакт", subject: "СБЕР (IT департамент)", time: "1 час назад", type: "contact" },
+  { id: 4, action: "Закрыта сделка", subject: "Контракт на 2.8M ₽ (ГАЗПРОМ)", time: "2 часа назад", type: "deal" },
+  { id: 5, action: "Получено сообщение", subject: "От клиента: 'Нужна срочная консультация'", time: "3 часа назад", type: "contact" },
+  { id: 6, action: "Создан новый контакт", subject: "Мария Иванова (Роснефть)", time: "4 часа назад", type: "contact" },
+  { id: 7, action: "Обновлён статус лида", subject: "Квалифицирован (Высокий приоритет)", time: "5 часов назад", type: "lead" },
+  { id: 8, action: "Завершена встреча", subject: "Демо-презентация продукта", time: "6 часов назад", type: "deal" },
 ]
 
 export const upcomingTasks: TaskItem[] = [
-  { id: 1, title: "Звонок клиенту", time: "Сегодня, 14:00", priority: "high" },
-  { id: 2, title: "Подготовить отчёт", time: "Сегодня, 16:30", priority: "medium" },
-  { id: 3, title: "Встреча с командой", time: "Завтра, 10:00", priority: "medium" },
+  { id: 1, title: "Звонок в СБЕР (IT директор)", time: "Сегодня, 14:00", priority: "high" },
+  { id: 2, title: "Подготовить отчёт по продажам Q3", time: "Сегодня, 16:30", priority: "medium" },
+  { id: 3, title: "Встреча с командой разработки", time: "Завтра, 10:00", priority: "medium" },
+  { id: 4, title: "Отправить предложение в Лукойл", time: "Завтра, 15:00", priority: "high" },
+  { id: 5, title: "Обновить CRM базу контактов", time: "Пятница, 18:00", priority: "low" },
 ]
 
 export const userLevel = {

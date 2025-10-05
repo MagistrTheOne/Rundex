@@ -124,10 +124,10 @@ export default function AnalyticsPage() {
     try {
       // Загружаем все данные аналитики параллельно
       const [kpisResponse, trendsResponse, sourcesResponse, pipelineResponse] = await Promise.all([
-        fetch(`/api/analytics/kpis?period=${timeRange}`),
-        fetch(`/api/analytics/sales-trends?period=${timeRange === '30d' ? '3m' : timeRange === '90d' ? '6m' : '1y'}`),
-        fetch(`/api/analytics/leads-by-source?period=${timeRange}`),
-        fetch(`/api/analytics/pipeline?period=${timeRange}`)
+        fetch(`/api/v1/analytics/kpis?period=${timeRange}`),
+        fetch(`/api/v1/analytics/sales-trends?period=${timeRange === '30d' ? '3m' : timeRange === '90d' ? '6m' : '1y'}`),
+        fetch(`/api/v1/analytics/leads-by-source?period=${timeRange}`),
+        fetch(`/api/v1/analytics/pipeline?period=${timeRange}`)
       ])
 
       if (kpisResponse.ok) {

@@ -123,15 +123,18 @@ export class SberAdapter {
     // Ограничиваем контекст последними сообщениями
     const recentContext = context.slice(-this.MAX_CONTEXT_LENGTH)
 
+    // Система всегда должна быть первой в массиве сообщений
     const messages: SberRequest['messages'] = [
       {
         role: 'system',
         content: this.createSystemPrompt()
       },
-      ...recentContext.map(msg => ({
-        role: (msg.role === 'user' ? 'user' : 'assistant') as 'user' | 'assistant',
-        content: msg.content
-      })),
+      ...recentContext
+        .filter(msg => msg.role !== 'system') // Убираем системные сообщения из контекста
+        .map(msg => ({
+          role: msg.role as 'user' | 'assistant',
+          content: msg.content
+        })),
       {
         role: 'user',
         content: message
@@ -139,10 +142,12 @@ export class SberAdapter {
     ]
 
     const request: SberRequest = {
-      model: 'GigaChat',
+      model: 'GigaChat-Pro', // Используем актуальную модель согласно документации
       messages,
       temperature: 0.7,
-      max_tokens: 500
+      max_tokens: 1000, // Увеличиваем лимит токенов
+      stream: false, // Отключаем streaming для простоты
+      repetition_penalty: 1.1 // Добавляем penalty для повторений
     }
 
     const response = await sberClient.chat(request)
@@ -153,6 +158,16 @@ export class SberAdapter {
 
     const aiMessage = response.choices[0]?.message?.content || ''
     const tokens = response.usage?.total_tokens || 0
+
+    // Проверяем на завершение по rate limit
+    const finishReason = response.choices[0]?.finish_reason
+    if (finishReason === 'length') {
+      console.warn('GigaChat response was truncated due to length limit')
+    } else if (finishReason === 'stop') {
+      // Нормальное завершение
+    } else {
+      console.warn('GigaChat response finished with reason:', finishReason)
+    }
 
     return {
       response: aiMessage,

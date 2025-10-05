@@ -7,6 +7,7 @@ import { Server as NetServer } from 'http'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import '@/lib/volodya/init' // Инициализация Volodya компонентов
 
 interface SocketWithUser extends SocketIO {
   userId?: string
@@ -63,22 +64,40 @@ const SocketHandler = async (req: NextApiRequest, res: NextApiResponseWithSocket
         return next(new Error('No session token found'))
       }
 
-      // Для простоты пока пропускаем аутентификацию
-      // В реальном приложении нужно проверить токен через NextAuth
+      // Верифицируем сессию через NextAuth
       try {
-        // Создаем тестового пользователя для демонстрации
-        // В продакшене нужно реализовать правильную проверку сессии
-        const testUser = await prisma.user.findFirst({
-          select: { id: true, email: true, name: true }
+        const session = await getServerSession({
+          req: {
+            headers: {
+              cookie: cookies
+            }
+          } as any,
+          res: {} as any,
+          ...authOptions
         })
 
-        if (!testUser) {
-          return next(new Error('No users found in database'))
+        if (!session?.user?.email) {
+          return next(new Error('Invalid session'))
         }
 
-        socket.userId = testUser.id
-        socket.userEmail = testUser.email || 'test@example.com'
-        socket.data = { user: testUser }
+        // Получаем полные данные пользователя из базы
+        const user = await prisma.user.findUnique({
+          where: { email: session.user.email },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            role: true
+          }
+        })
+
+        if (!user) {
+          return next(new Error('User not found'))
+        }
+
+        socket.userId = user.id
+        socket.userEmail = user.email
+        socket.data = { user }
 
         next()
       } catch (dbError) {

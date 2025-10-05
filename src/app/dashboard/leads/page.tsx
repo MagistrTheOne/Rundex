@@ -72,7 +72,7 @@ export default function LeadsPage() {
         if (priorityFilter !== "ALL") params.append("priority", priorityFilter)
         if (searchQuery) params.append("search", searchQuery)
 
-        const response = await fetch(`/api/leads?${params}`)
+        const response = await fetch(`/api/v1/leads?${params}`)
         if (!response.ok) throw new Error("Ошибка загрузки лидов")
 
         const data = await response.json()
@@ -92,7 +92,7 @@ export default function LeadsPage() {
 
   const handleCreateLead = async (leadData: any) => {
     try {
-      const response = await fetch('/api/leads', {
+      const response = await fetch('/api/v1/leads', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -112,7 +112,7 @@ export default function LeadsPage() {
 
   const handleEditLead = async (leadData: any) => {
     try {
-      const response = await fetch(`/api/leads/${editingLead?.id}`, {
+      const response = await fetch(`/api/v1/leads/${editingLead?.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -134,7 +134,7 @@ export default function LeadsPage() {
 
   const handleDeleteLead = async (leadId: string) => {
     try {
-      const response = await fetch(`/api/leads/${leadId}`, {
+      const response = await fetch(`/api/v1/leads/${leadId}`, {
         method: 'DELETE',
       })
 

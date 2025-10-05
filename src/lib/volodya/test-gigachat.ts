@@ -7,15 +7,26 @@ export async function testGigaChatConnection() {
   console.log('🧪 Testing GigaChat connection...')
   console.log('📋 Client ID:', process.env.GIGACHAT_CLIENT_ID?.substring(0, 10) + '...')
   console.log('📋 Client Secret configured:', !!process.env.GIGACHAT_CLIENT_SECRET)
+  console.log('📋 Auth Key configured:', !!process.env.GIGACHAT_AUTH_KEY)
 
   try {
     // Проверяем конфигурацию
-    const hasCredentials = !!(process.env.GIGACHAT_CLIENT_ID && process.env.GIGACHAT_CLIENT_SECRET)
+    const hasCredentials = !!(
+      (process.env.GIGACHAT_CLIENT_ID && process.env.GIGACHAT_CLIENT_SECRET) ||
+      process.env.GIGACHAT_AUTH_KEY
+    )
     console.log('📋 Credentials configured:', hasCredentials)
 
     if (!hasCredentials) {
       console.log('❌ GigaChat credentials not found in environment')
       return { success: false, error: 'No credentials' }
+    }
+
+    // Проверяем доступность клиента
+    const sberClient = (await import('./sberClient')).default
+    if (!sberClient.isAvailable()) {
+      console.log('❌ SberClient reports as unavailable')
+      return { success: false, error: 'Client unavailable' }
     }
 
     // Тестируем получение токена напрямую
